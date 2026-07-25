@@ -1,18 +1,17 @@
-# mtdpartikr - MTD partition in kernel runtime
+# mtdpartikr - MTD partitioning in kernel runtime
 
-This kernel module registers a set of devices, one per MTD device.
+`mtdpartikr` is a kernel module which registers new character devices for
+master MTD devices, to allow userspace to create MTD partitions in kernel
+runtime, without rebooting, after the boot process is completed.
 
 It is intended specifically for flash devices and can filter based on
 the MTD type - for now, either a NAND or NOR flash device.
 
-Together, it helps a user to define a set of MTD partitions on an MTD
-device, after the boot process is completed.
-
 `mtdpartikr` is pronounced as "partiker" (`em-tee-dee-par-tee-ker`).
 
-I know "partiker" is not a word in English, but I thought it will be
-catchy and the resemblence to the word of "party" will have a somewhat
-joyful meaning to the name as well.
+"partiker" is not a word in English, but its sound might be catchy and the
+resemblence to the word of "party" could have a somewhat joyful meaning to
+the name as well.
 
 ## Prepare for compiling
 
