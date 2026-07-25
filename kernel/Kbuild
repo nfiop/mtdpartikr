@@ -1,0 +1,7 @@
+obj-m := mtdpartikr.o
+
+mtdpartikr-y := init.o \
+           ctrl_dev_class.o \
+           ctrl_dev.o
+
+ccflags-y += -I$(src)/../include -I$(src)/
