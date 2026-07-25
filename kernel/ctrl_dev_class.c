@@ -5,6 +5,8 @@
 
 #include <linux/cdev.h>
 #include <linux/fs.h>
+#include <linux/mm.h>
+#include <linux/slab.h>
 
 #include "ctrl_dev.h"
 #include "ctrl_dev_class.h"
@@ -32,6 +34,12 @@ struct mtdpartctl_dev_class {
 	struct mtdpartctl_device **devs;
 	size_t count;
 	dev_t devno;
+
+	/* This variable is used by the init path, to give an indication
+	 * how many mtd devices have been ref-counted so far.
+	 * On module exit, it can be used to drop ref-counts safely.
+	 */
+	size_t mtd_count;
 };
 
 static struct mtdpartctl_dev_class s_all_devs;
@@ -148,15 +156,24 @@ static int add_mtd_count(
 static int get_mtd_device_ref(
     struct mtdpartctl_dev_class *dev_class, size_t idx, struct mtd_info *info)
 {
-	struct mtd_info *tmp;
-	tmp = get_mtd_device(info, 0);
-	if (IS_ERR(tmp)) {
-		pr_err(
-		    "mtdpartikr: failed to open mtd, iteration idx %zu\n", idx);
-		return PTR_ERR(tmp);
+	int ret;
+
+	/* Using get_mtd_device is unsafe - it needs to lock the mtd_table_mutex
+	 * but we actually already locked it...
+	 */
+	ret = __get_mtd_device(info);
+	if (ret < 0) {
+		pr_err("mtdpartikr: failed to get ref on MTD %d, iteration idx "
+		       "%zu\n",
+		    info->index, idx);
+		goto exit;
 	}
-	dev_class->mtd_devs[idx] = tmp;
-	return 0;
+
+	dev_class->mtd_devs[idx] = info;
+	ret = 0;
+
+exit:
+	return ret;
 }
 
 static void free_array_with_items(void **arr, size_t count)
@@ -193,9 +210,9 @@ cleanup:
 static void put_all_mtd_devices(struct mtdpartctl_dev_class *dev_class)
 {
 	int idx;
-	WARN_ON(dev_class->count == 0);
+	WARN_ON(dev_class->mtd_count == 0);
 
-	for (idx = 0; idx < dev_class->count; idx++) {
+	for (idx = 0; idx < dev_class->mtd_count; idx++) {
 		put_mtd_device(dev_class->mtd_devs[idx]);
 	}
 
@@ -206,8 +223,9 @@ static int get_all_matching_mtd_devices(
     struct mtdpartctl_dev_class *dev_class, enum mtd_device_type_filter filter)
 {
 	int ret;
-	int count = 0;
 
+	dev_class->mtd_count = 0;
+	dev_class->count = 0;
 	mutex_lock(&mtd_table_mutex);
 	/* After this call, we know the actual count of devices we want to
 	 * handle.
@@ -227,7 +245,7 @@ static int get_all_matching_mtd_devices(
 	}
 
 	dev_class->mtd_devs =
-	    kvzalloc(count * sizeof(struct mtd_info *), GFP_KERNEL);
+	    kvzalloc(dev_class->count * sizeof(struct mtd_info *), GFP_KERNEL);
 	if (!dev_class->mtd_devs) {
 		ret = -ENOMEM;
 		goto exit;
@@ -243,6 +261,7 @@ static int get_all_matching_mtd_devices(
 	goto exit;
 
 free_mtd_devs_array:
+	put_all_mtd_devices(dev_class);
 	kvfree(dev_class->mtd_devs);
 
 exit:
@@ -292,7 +311,7 @@ int mtdpartctl_device_class_init(enum mtd_device_type_filter filter)
 
 	s_all_devs.devs = (struct mtdpartctl_device **)alloc_array_with_items(
 	    s_all_devs.count, sizeof(struct mtdpartctl_device));
-	if (s_all_devs.devs) {
+	if (!s_all_devs.devs) {
 		ret = -ENOMEM;
 		goto failed_creating_array;
 	}
