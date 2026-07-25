@@ -98,12 +98,28 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 
 	ret = mtdpartctl_chrdev_create(dev);
 	if (ret < 0)
-		return ret;
+		goto exit;
+
+	dev->device = device_create(dev->device_class, NULL, dev->devno, NULL,
+	    "mtdpartctl%d", MINOR(dev->devno));
+
+	if (IS_ERR(dev->device)) {
+		pr_err("mtdpartikr: device_create failed\n");
+		ret = PTR_ERR(dev->device);
+		goto delete_chrdev;
+	}
 
 	return 0;
+
+delete_chrdev:
+	mtdpartctl_chrdev_destory(dev);
+
+exit:
+	return ret;
 }
 
 void mtdpartctl_device_destroy(struct mtdpartctl_device *dev)
 {
+	device_destroy(dev->device_class, dev->devno);
 	mtdpartctl_chrdev_destory(dev);
 }
