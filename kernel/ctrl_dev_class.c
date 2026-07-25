@@ -170,6 +170,8 @@ static int get_mtd_device_ref(
 	}
 
 	dev_class->mtd_devs[idx] = info;
+	dev_class->mtd_count++;
+	WARN_ON((idx + 1) != mtd_count);
 	ret = 0;
 
 exit:
