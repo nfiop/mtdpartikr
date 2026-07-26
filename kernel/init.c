@@ -45,7 +45,8 @@ static int determine_device_type_filter(enum mtd_device_type_filter *filter)
 		goto exit;
 	}
 
-	pr_err("mtdpartikr: invalid device type filter %s", device_type_filter);
+	pr_err(
+	    "mtdpartikr: invalid device type filter %s\n", device_type_filter);
 	ret = -EINVAL;
 exit:
 	return ret;

@@ -126,7 +126,7 @@ static int verify_partition_basic_conditions(
 
 	if ((offset % dev->mtd->erasesize) != 0) {
 		pr_warn_ratelimited("mtdpartikr: failed to add new partition, "
-				    "length %llu unaligned to erase size %u\n",
+				    "offset %llu unaligned to erase size %u\n",
 		    offset, master_mtd->erasesize);
 		return -EINVAL;
 	}

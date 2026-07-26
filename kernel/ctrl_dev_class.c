@@ -297,7 +297,7 @@ static int device_class_create_devices(struct mtdpartctl_dev_class *dev_class)
 
 	for (device_idx = 0; device_idx < dev_class->count; device_idx++) {
 		mtd = dev_class->devs[device_idx]->mtd;
-		pr_info("mtdpartikr: mtdpartctl%d => mtd%d (%s)", device_idx,
+		pr_info("mtdpartikr: mtdpartctl%d => mtd%d (%s)\n", device_idx,
 		    mtd->index, mtd->name);
 	}
 
