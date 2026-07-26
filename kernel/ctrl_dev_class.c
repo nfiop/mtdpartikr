@@ -283,6 +283,7 @@ static int device_class_create_devices(struct mtdpartctl_dev_class *dev_class)
 {
 	int device_idx;
 	int ret;
+	struct mtd_info *mtd;
 	ret = alloc_chrdev_region(
 	    &dev_class->devno, 0, dev_class->count, MTDPARTCTL_DEVICE_NAME);
 	if (ret != 0)
@@ -293,6 +294,12 @@ static int device_class_create_devices(struct mtdpartctl_dev_class *dev_class)
 	ret = add_devices(dev_class, &device_idx);
 	if (ret != 0)
 		goto error_create_devices;
+
+	for (device_idx = 0; device_idx < dev_class->count; device_idx++) {
+		mtd = dev_class->devs[device_idx]->mtd;
+		pr_info("mtdpartikr: mtdpartctl%d => mtd%d (%s)", device_idx,
+		    mtd->index, mtd->name);
+	}
 
 	return 0;
 
