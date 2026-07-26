@@ -96,9 +96,19 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 
 	atomic_set(&dev->already_open, 0);
 
+	/* Get a refcount on the owner of the MTD device -
+	 * this way we ensure that the MTD device can't disappear
+	 * when we unregister and register it when "parsing" the partition
+	 * table on that MTD device.
+	 */
+	if (!try_module_get(dev->mtd->owner)) {
+		ret = -EIO;
+		goto exit;
+	}
+
 	ret = mtdpartctl_chrdev_create(dev);
 	if (ret < 0)
-		goto exit;
+		goto drop_module;
 
 	dev->device = device_create(dev->device_class, NULL, dev->devno, NULL,
 	    "mtdpartctl%d", MINOR(dev->devno));
@@ -111,6 +121,9 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 
 	return 0;
 
+drop_module:
+	module_put(dev->mtd->owner);
+
 delete_chrdev:
 	mtdpartctl_chrdev_destory(dev);
 
@@ -122,4 +135,5 @@ void mtdpartctl_device_destroy(struct mtdpartctl_device *dev)
 {
 	device_destroy(dev->device_class, dev->devno);
 	mtdpartctl_chrdev_destory(dev);
+	module_put(dev->mtd->owner);
 }
