@@ -11,7 +11,10 @@
 #include <linux/file.h>
 #include <linux/list.h>
 #include <linux/mtd/mtd.h>
+#include <linux/mutex.h>
 #include <linux/types.h>
+
+#include "defs.h"
 
 #define MTDPARTCTL_DEVICE_NAME "mtdpartctl"
 
@@ -20,9 +23,17 @@ struct mtdparser_partition {
 	u64 length;
 	bool writable;
 	bool powerup_lock_enabled;
+
+	char name[MTD_PARTITION_NAME_MAX_LENGTH];
+
+	struct list_head node;
 };
 
 struct mtdparser_context {
+	struct mutex lock;
+
+	struct list_head partitions;
+	size_t count;
 };
 
 struct mtdpartctl_device {

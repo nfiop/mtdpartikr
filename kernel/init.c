@@ -11,6 +11,7 @@
 #include "ctrl_dev.h"
 #include "ctrl_dev_class.h"
 #include "defs.h"
+#include "mtd_parser.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Liav A");
@@ -55,17 +56,31 @@ static int __init mtdpartikr_init(void)
 	int ret;
 	enum mtd_device_type_filter filter;
 
-	ret = determine_device_type_filter(&filter);
+	if (!IS_ENABLED(CONFIG_MTD_PARTITIONED_MASTER)) {
+		pr_err("mtdpartikr: CONFIG_MTD_PARTITIONED_MASTER is not "
+		       "enabled in your kernel - this module relies on this "
+		       "flag to properly work, abort.\n");
+		ret = -ENOTSUPP;
+		goto exit;
+	}
+
+	ret = mtdpartctl_mtd_parser_init();
 	if (ret < 0)
 		goto exit;
 
+	ret = determine_device_type_filter(&filter);
+	if (ret < 0)
+		goto remove_mtd_parser;
+
 	ret = mtdpartctl_device_class_init(filter);
 	if (ret < 0)
-		goto exit;
+		goto remove_mtd_parser;
 
 	printk(KERN_INFO "mtdpartikr: kernel module loaded!\n");
 	return 0;
 
+remove_mtd_parser:
+	mtdpartctl_mtd_parser_destroy();
 exit:
 	return ret;
 }
@@ -73,6 +88,7 @@ exit:
 static void __exit mtdpartikr_exit(void)
 {
 	mtdpartctl_device_class_destroy();
+	mtdpartctl_mtd_parser_destroy();
 	printk(KERN_INFO "mtdpartikr: kernel module unloaded!\n");
 }
 
