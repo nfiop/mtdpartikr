@@ -273,6 +273,43 @@ exit:
 	return ret;
 }
 
+static int delete_partitions(struct mtdpartctl_device *dev)
+{
+	int ret;
+	struct mtd_partitions_context *context = &dev->context;
+
+	/* NOTE!: We hold a refcount on the MTD device as well as the module
+	 * that owns the MTD device. We will drop the refcount on the MTD
+	 * device, but keep the ref on the module to ensure the device doesn't
+	 * disappear.
+	 * This is quite tricky and playing with fire, but there's no way around
+	 * when we want to re-initialize the MTD device with no partitions.
+	 *
+	 * In contrast to the create_partitions function, we will lock the
+	 * context lock just so so we don't try to unreigster the device and
+	 * apply the context partitions while doing so.
+	 */
+
+	mutex_lock(&context->lock);
+
+	put_mtd_device(dev->mtd);
+
+	/* We should be ready to unregister, given that nobody else uses this
+	 * MTD device.
+	 */
+	ret = mtd_device_unregister(dev->mtd);
+	if (ret < 0)
+		goto cleanup;
+
+	ret = mtd_device_parse_register(
+	    dev->mtd, mtdpartctl_probes, NULL, NULL, 0);
+
+cleanup:
+	get_mtd_device_after_put(dev->mtd);
+	mutex_unlock(&context->lock);
+	return ret;
+}
+
 static long mtdpartctl_chrdev_ioctl(
     struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -332,6 +369,14 @@ static long mtdpartctl_chrdev_ioctl(
 	}
 	case MTDPARTCTL_IOC_CREATE_PARTITIONS: {
 		ret = create_partitions(dev);
+		goto exit;
+	}
+
+	case MTDPARTCTL_IOC_DELETE_PARTITIONS: {
+		// NOTE/FIXME?: I am very unsure if it all works correctly.
+		// This should be tested thoroughly - it might have nasty bugs
+		// in the path.
+		ret = delete_partitions(dev);
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_RESTART_PARTITIONS_CONTEXT: {
