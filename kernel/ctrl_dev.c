@@ -256,13 +256,15 @@ static int apply_parser(struct mtdpartctl_device *dev)
 	 */
 	ret = mtd_device_unregister(dev->mtd);
 	if (ret < 0)
-		goto get_mtd_device_back;
+		goto cleanup;
 
 	BUG_ON(context->count == 0);
 	ret = mtd_device_parse_register(
 	    dev->mtd, mtdpartctl_probes, NULL, partitions, context->count);
 
-get_mtd_device_back:
+cleanup:
+	kvfree(partitions);
+
 	get_mtd_device_after_put(dev->mtd);
 
 exit:
