@@ -26,6 +26,19 @@ extern struct mutex mtd_table_mutex;
 
 extern const char *const mtdpartctl_probes[];
 
+static void restart_context(struct mtd_partitions_context *context)
+{
+	struct mtd_context_partition *list_node, *tmp;
+	mutex_lock(&context->lock);
+	list_for_each_entry_safe(list_node, tmp, &context->partitions, node)
+	{
+		list_del(&list_node->node);
+		kvfree(list_node);
+	}
+	context->count = 0;
+	mutex_unlock(&context->lock);
+}
+
 static int mtdpartctl_chrdev_open(struct inode *inode, struct file *filp)
 {
 	dev_t dev = inode->i_rdev;
@@ -41,6 +54,9 @@ static int mtdpartctl_chrdev_open(struct inode *inode, struct file *filp)
 	if (atomic_cmpxchg(&mtdpartctl_dev->already_open, 0, 1)) {
 		return -EBUSY;
 	}
+
+	/* Start with a clean context */
+	restart_context(&mtdpartctl_dev->context);
 
 	filp->private_data = mtdpartctl_dev;
 	return 0;
@@ -91,19 +107,6 @@ static int verify_partition_params_locked(
 	}
 
 	return ret;
-}
-
-static void restart_context(struct mtd_partitions_context *context)
-{
-	struct mtd_context_partition *list_node, *tmp;
-	mutex_lock(&context->lock);
-	list_for_each_entry_safe(list_node, tmp, &context->partitions, node)
-	{
-		list_del(&list_node->node);
-		kvfree(list_node);
-	}
-	context->count = 0;
-	mutex_unlock(&context->lock);
 }
 
 static int verify_partition_basic_conditions(
