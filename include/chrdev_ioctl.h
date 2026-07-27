@@ -49,9 +49,9 @@ struct ext_mtd_partition_info {
 #define MTDPARTCTL_IOC_ADD_NEW_PART                                            \
 	_IOW(MTDPARTCTL_IOC_MAGIC, 1, struct mtd_partition_info)
 #define MTDPARTCTL_IOC_DEL_PART _IOW(MTDPARTCTL_IOC_MAGIC, 2, u32)
-#define MTDPARTCTL_IOC_ADD_PARSER_PART                                         \
+#define MTDPARTCTL_IOC_ADD_CONTEXT_PART                                        \
 	_IOW(MTDPARTCTL_IOC_MAGIC, 3, struct ext_mtd_partition_info)
 #define MTDPARTCTL_IOC_CREATE_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 4)
-#define MTDPARTCTL_IOC_RESTART_PARSER _IO(MTDPARTCTL_IOC_MAGIC, 5)
+#define MTDPARTCTL_IOC_RESTART_PARTITIONS_CONTEXT _IO(MTDPARTCTL_IOC_MAGIC, 5)
 
 #endif

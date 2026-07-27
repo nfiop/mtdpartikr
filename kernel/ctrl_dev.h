@@ -18,7 +18,7 @@
 
 #define MTDPARTCTL_DEVICE_NAME "mtdpartctl"
 
-struct mtdparser_partition {
+struct mtd_context_partition {
 	u64 offset;
 	u64 length;
 	bool writable;
@@ -29,9 +29,10 @@ struct mtdparser_partition {
 	struct list_head node;
 };
 
-struct mtdparser_context {
+struct mtd_partitions_context {
 	struct mutex lock;
 
+	/* List of `struct mtd_context_partition`s */
 	struct list_head partitions;
 	size_t count;
 };
@@ -46,7 +47,7 @@ struct mtdpartctl_device {
 	struct device *device;
 	struct cdev ctrl_cdev;
 	atomic_t already_open;
-	struct mtdparser_context parser_context;
+	struct mtd_partitions_context context;
 };
 
 int mtdpartctl_device_create(struct mtdpartctl_device *dev);

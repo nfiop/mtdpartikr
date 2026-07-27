@@ -54,7 +54,7 @@ static int mtdpartctl_chrdev_release(struct inode *inode, struct file *filp)
 }
 
 static int existing_partition_contains_range(
-    struct mtdparser_partition *partition, u64 new_offset, u64 new_length)
+    struct mtd_context_partition *partition, u64 new_offset, u64 new_length)
 {
 	u64 existing_partition_end;
 	u64 new_partition_end;
@@ -74,10 +74,11 @@ static int existing_partition_contains_range(
 }
 
 static int verify_partition_params_locked(
-    struct mtdparser_context *context, struct ext_mtd_partition_info *partition)
+    struct mtd_partitions_context *context,
+    struct ext_mtd_partition_info *partition)
 {
 	int ret = 0;
-	struct mtdparser_partition *item;
+	struct mtd_context_partition *item;
 	u64 offset = partition->base.offset;
 	u64 length = partition->base.length;
 
@@ -92,9 +93,9 @@ static int verify_partition_params_locked(
 	return ret;
 }
 
-static void restart_parser_context(struct mtdparser_context *context)
+static void restart_context(struct mtd_partitions_context *context)
 {
-	struct mtdparser_partition *list_node, *tmp;
+	struct mtd_context_partition *list_node, *tmp;
 	mutex_lock(&context->lock);
 	list_for_each_entry_safe(list_node, tmp, &context->partitions, node)
 	{
@@ -141,12 +142,12 @@ static int verify_partition_basic_conditions(
 	return 0;
 }
 
-static int add_parser_partition(
+static int add_context_partition(
     struct mtdpartctl_device *dev, struct ext_mtd_partition_info *partition)
 {
 	int ret;
-	struct mtdparser_context *context = &dev->parser_context;
-	struct mtdparser_partition *new_part;
+	struct mtd_partitions_context *context = &dev->context;
+	struct mtd_context_partition *new_part;
 
 	ret = verify_partition_basic_conditions(dev, partition);
 	if (ret < 0)
@@ -158,7 +159,7 @@ static int add_parser_partition(
 	if (ret < 0)
 		goto unlock_context;
 
-	new_part = kvzalloc(sizeof(struct mtdparser_partition), GFP_KERNEL);
+	new_part = kvzalloc(sizeof(struct mtd_context_partition), GFP_KERNEL);
 	if (!new_part) {
 		ret = -ENOMEM;
 		goto unlock_context;
@@ -191,10 +192,11 @@ static void get_mtd_device_after_put(struct mtd_info *mtd)
 }
 
 static int convert_context_to_mtd_partitions_locked(
-    struct mtdparser_context *context, struct mtd_partition **partitions_np)
+    struct mtd_partitions_context *context,
+    struct mtd_partition **partitions_np)
 {
 	size_t idx;
-	struct mtdparser_partition *item;
+	struct mtd_context_partition *item;
 	struct mtd_partition *partition;
 
 	/* Trying to apply an empty list is an invalid operation, don't allow it
@@ -232,7 +234,7 @@ static int convert_context_to_mtd_partitions_locked(
 static int create_partitions(struct mtdpartctl_device *dev)
 {
 	int ret;
-	struct mtdparser_context *context = &dev->parser_context;
+	struct mtd_partitions_context *context = &dev->context;
 	struct mtd_partition *partitions = NULL;
 
 	mutex_lock(&context->lock);
@@ -303,7 +305,7 @@ static long mtdpartctl_chrdev_ioctl(
 	}
 	case MTDPARTCTL_IOC_ADD_NEW_PART: {
 		// FIXME: We don't validate offsets or lengths like we do for
-		// the parser functionality. Is it a problem or we are OK
+		// the context path. Is it a problem or we are OK
 		// relying on the MTD API?
 		struct mtd_partition_info part_info;
 		if (copy_from_user(&part_info, (int __user *)arg,
@@ -320,20 +322,20 @@ static long mtdpartctl_chrdev_ioctl(
 		ret = mtd_del_partition(backend, idx);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_ADD_PARSER_PART: {
+	case MTDPARTCTL_IOC_ADD_CONTEXT_PART: {
 		struct ext_mtd_partition_info partition;
 		if (copy_from_user(&partition, (int __user *)arg,
 			sizeof(struct ext_mtd_partition_info)))
 			return -EFAULT;
-		ret = add_parser_partition(dev, &partition);
+		ret = add_context_partition(dev, &partition);
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_CREATE_PARTITIONS: {
 		ret = create_partitions(dev);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_RESTART_PARSER: {
-		restart_parser_context(&dev->parser_context);
+	case MTDPARTCTL_IOC_RESTART_PARTITIONS_CONTEXT: {
+		restart_context(&dev->context);
 		ret = 0;
 		goto exit;
 	}
@@ -392,8 +394,8 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 		goto exit;
 	}
 
-	INIT_LIST_HEAD(&dev->parser_context.partitions);
-	mutex_init(&dev->parser_context.lock);
+	INIT_LIST_HEAD(&dev->context.partitions);
+	mutex_init(&dev->context.lock);
 
 	ret = mtdpartctl_chrdev_create(dev);
 	if (ret < 0)
