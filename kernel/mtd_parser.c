@@ -3,9 +3,11 @@
  * Copyright (c) 2026 Liav A
  */
 
-#include "ctrl_dev.h"
 #include <asm-generic/errno.h>
+#include <linux/module.h>
 #include <linux/mtd/partitions.h>
+
+#include "mtd_parser.h"
 
 #define MTD_PARSER_NAME "mtdpartikr"
 

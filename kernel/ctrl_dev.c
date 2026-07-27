@@ -229,7 +229,7 @@ static int convert_context_to_mtd_partitions_locked(
 	return 0;
 }
 
-static int apply_parser(struct mtdpartctl_device *dev)
+static int create_partitions(struct mtdpartctl_device *dev)
 {
 	int ret;
 	struct mtdparser_context *context = &dev->parser_context;
@@ -263,9 +263,8 @@ static int apply_parser(struct mtdpartctl_device *dev)
 	    dev->mtd, mtdpartctl_probes, NULL, partitions, context->count);
 
 cleanup:
-	kvfree(partitions);
-
 	get_mtd_device_after_put(dev->mtd);
+	kvfree(partitions);
 
 exit:
 	mutex_unlock(&context->lock);
@@ -329,8 +328,8 @@ static long mtdpartctl_chrdev_ioctl(
 		ret = add_parser_partition(dev, &partition);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_APPLY_PARSER: {
-		ret = apply_parser(dev);
+	case MTDPARTCTL_IOC_CREATE_PARTITIONS: {
+		ret = create_partitions(dev);
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_RESTART_PARSER: {
