@@ -234,7 +234,7 @@ static int convert_context_to_mtd_partitions_locked(
 	return 0;
 }
 
-static int create_partitions(struct mtdpartctl_device *dev)
+static int create_context_partitions(struct mtdpartctl_device *dev)
 {
 	int ret;
 	struct mtd_partitions_context *context = &dev->context;
@@ -343,7 +343,7 @@ static long mtdpartctl_chrdev_ioctl(
 		ret = 0;
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_ADD_NEW_PART: {
+	case MTDPARTCTL_IOC_ADD_MTD_PARTITION: {
 		// FIXME: We don't validate offsets or lengths like we do for
 		// the context path. Is it a problem or we are OK
 		// relying on the MTD API?
@@ -355,7 +355,7 @@ static long mtdpartctl_chrdev_ioctl(
 		    part_info.offset, part_info.length);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_DEL_PART: {
+	case MTDPARTCTL_IOC_DEL_MTD_PARTITION: {
 		u32 idx;
 		if (copy_from_user(&idx, (int __user *)arg, sizeof(u32)))
 			return -EFAULT;
@@ -370,19 +370,19 @@ static long mtdpartctl_chrdev_ioctl(
 		ret = add_context_partition(dev, &partition);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_CREATE_PARTITIONS: {
-		ret = create_partitions(dev);
+	case MTDPARTCTL_IOC_CREATE_CONTEXT_PARTITIONS: {
+		ret = create_context_partitions(dev);
 		goto exit;
 	}
 
-	case MTDPARTCTL_IOC_DELETE_PARTITIONS: {
+	case MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS: {
 		// NOTE/FIXME?: I am very unsure if it all works correctly.
 		// This should be tested thoroughly - it might have nasty bugs
 		// in the path.
 		ret = delete_partitions(dev);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_RESTART_PARTITIONS_CONTEXT: {
+	case MTDPARTCTL_IOC_RESTART_CONTEXT: {
 		restart_context(&dev->context);
 		ret = 0;
 		goto exit;
