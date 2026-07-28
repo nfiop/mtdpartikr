@@ -4,6 +4,7 @@
  */
 
 #include <linux/fs.h>
+#include <linux/math64.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/mtd/mtd.h>
@@ -116,6 +117,7 @@ static int verify_partition_basic_conditions(
 	u64 offset = partition->base.offset;
 	u64 length = partition->base.length;
 	u64 end;
+	u64 rem;
 
 	if (check_add_overflow(offset, length, &end))
 		return -EINVAL;
@@ -128,14 +130,16 @@ static int verify_partition_basic_conditions(
 		return -EINVAL;
 	}
 
-	if ((offset % dev->mtd->erasesize) != 0) {
+	rem = do_div(offset, dev->mtd->erasesize);
+	if (rem != 0) {
 		pr_warn_ratelimited("mtdpartikr: failed to add new partition, "
 				    "offset %llu unaligned to erase size %u\n",
 		    offset, master_mtd->erasesize);
 		return -EINVAL;
 	}
 
-	if ((length % dev->mtd->erasesize) != 0) {
+	rem = do_div(length, dev->mtd->erasesize);
+	if (rem != 0) {
 		pr_warn_ratelimited("mtdpartikr: failed to add new partition, "
 				    "length %llu unaligned to erase size %u\n",
 		    length, master_mtd->erasesize);
