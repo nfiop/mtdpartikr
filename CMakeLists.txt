@@ -184,3 +184,4 @@ add_custom_target(kernel_module_clean
     VERBATIM
 )
 
+add_subdirectory(user)
