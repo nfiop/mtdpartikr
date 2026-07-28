@@ -63,15 +63,21 @@ message(STATUS "System: ${CMAKE_SYSTEM_NAME}")
 
 if(TOOLCHAIN_PREFIX MATCHES "x86_64")
     set(KERNEL_ARCH "x86")
+    set(GO_ARCH "amd64")
 
 elseif(TOOLCHAIN_PREFIX MATCHES "aarch64")
     set(KERNEL_ARCH "arm64")
+    set(GO_ARCH "arm64")
 
 elseif(TOOLCHAIN_PREFIX MATCHES "^arm")
     set(KERNEL_ARCH "arm")
+    set(GO_ARCH "arm")
+    set(GO_ARM_LVL 6)
 
+# FIXME: Add support for RISC-V32
 elseif(TOOLCHAIN_PREFIX MATCHES "riscv64")
     set(KERNEL_ARCH "riscv")
+    set(GO_ARCH "riscv64")
 
 else()
     message(FATAL_ERROR "Unknown toolchain prefix: ${TOOLCHAIN_PREFIX}")
