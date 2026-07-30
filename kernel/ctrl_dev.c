@@ -3,6 +3,7 @@
  * Copyright (c) 2026 Liav A
  */
 
+#include <linux/build_bug.h>
 #include <linux/fs.h>
 #include <linux/math64.h>
 #include <linux/mm.h>
@@ -111,13 +112,20 @@ static int verify_partition_params_locked(
 }
 
 static int verify_partition_basic_conditions(
-    struct mtdpartctl_device *dev, struct ext_mtd_partition_info *partition)
+    struct mtdpartctl_device *dev, struct mtd_partition_info *partition)
 {
 	struct mtd_info *master_mtd = dev->mtd;
-	u64 offset = partition->base.offset;
-	u64 length = partition->base.length;
+	u64 offset = partition->offset;
+	u64 length = partition->length;
 	u64 end;
 	u64 rem;
+
+	/* MTDPART_SIZ_FULL is defined as (0), but we should convert it
+	 * on the MTDPARTCTL_IOC_ADD_MTD_PARTITION ioctl to full size, so
+	 * this should not appear here...
+	 */
+	if (length == 0)
+		return -EINVAL;
 
 	if (check_add_overflow(offset, length, &end))
 		return -EINVAL;
@@ -156,7 +164,7 @@ static int add_context_partition(
 	struct mtd_partitions_context *context = &dev->context;
 	struct mtd_context_partition *new_part;
 
-	ret = verify_partition_basic_conditions(dev, partition);
+	ret = verify_partition_basic_conditions(dev, &partition->base);
 	if (ret < 0)
 		goto exit;
 
@@ -317,6 +325,28 @@ cleanup:
 	return ret;
 }
 
+static_assert(MTDPART_SIZ_FULL == (0));
+
+static int adapt_possible_full_mtd_partition_length(
+    struct mtdpartctl_device *dev, struct mtd_partition_info *part_info)
+{
+	u64 part_length = part_info->length;
+	u64 mtd_dev_size = dev->mtd->size;
+	u64 part_offset = part_info->offset;
+	/* MTDPART_SIZ_FULL should be defined as (0), but we don't like
+	 * that value, so let's change it to a real length.
+	 */
+	if (part_length == MTDPART_SIZ_FULL) {
+		if (check_sub_overflow(
+			mtd_dev_size, part_offset, &part_length)) {
+			return -EINVAL;
+		}
+
+		part_info->length = part_length;
+	}
+	return 0;
+}
+
 static long mtdpartctl_chrdev_ioctl(
     struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -348,13 +378,19 @@ static long mtdpartctl_chrdev_ioctl(
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_ADD_MTD_PARTITION: {
-		// FIXME: We don't validate offsets or lengths like we do for
-		// the context path. Is it a problem or we are OK
-		// relying on the MTD API?
 		struct mtd_partition_info part_info;
 		if (copy_from_user(&part_info, (int __user *)arg,
 			sizeof(struct mtd_partition_info)))
 			return -EFAULT;
+
+		ret = adapt_possible_full_mtd_partition_length(dev, &part_info);
+		if (ret < 0)
+			goto exit;
+
+		ret = verify_partition_basic_conditions(dev, &part_info);
+		if (ret < 0)
+			goto exit;
+
 		ret = mtd_add_partition(backend, part_info.name,
 		    part_info.offset, part_info.length);
 		goto exit;
