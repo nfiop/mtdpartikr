@@ -51,3 +51,36 @@ add_custom_target(get_info_golang_test ALL
 )
 
 add_dependencies(get_info_golang_test mtdpartctl)
+
+# C utests
+
+set(MTDPARTCTL_UTESTS
+    add_part_no_context
+    create_empty_context
+    del_non_existing_part
+    get_info
+    invalid_ioctl
+    restart_context
+    restart_mtd
+)
+
+foreach(t ${MTDPARTCTL_UTESTS})
+    add_executable(${t} ${t}.c)
+
+    target_include_directories(${t} PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/user/common
+        ${CMAKE_SOURCE_DIR}/user/utests
+    )
+
+    target_compile_options(${t} PRIVATE -Wall -Wextra -Werror)
+    target_link_options(${t} PRIVATE -static)
+    target_link_libraries(${t} PRIVATE mtdpartctl)
+
+    add_dependencies(${t} mtdpartctl)
+
+    # Optional: debug build support
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+        target_compile_options(${t} PRIVATE -O0 -g)
+    endif()
+endforeach()
