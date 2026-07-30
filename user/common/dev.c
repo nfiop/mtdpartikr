@@ -55,39 +55,54 @@ int open_mtdpartctl_device_by_argv_index(const char *index)
 	return fd;
 }
 
+#define INVOKE_IOCTL_WITH_RET_AS_ERRNO(fd, ioctl_name, param)                  \
+	do {                                                                   \
+		int ret;                                                       \
+		ret = ioctl(fd, ioctl_name, param);                            \
+		if (ret < 0) {                                                 \
+			ret = -errno;                                          \
+		}                                                              \
+		return ret;                                                    \
+	} while (0)
+
 int mtdpartctl_get_info(int fd, struct mtdpartctl_info *info)
 {
-	return ioctl(fd, MTDPARTCTL_IOC_GET_INFO, info);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(fd, MTDPARTCTL_IOC_GET_INFO, info);
 }
 
 int mtdpartctl_add_new_partition(int fd, struct mtd_partition_info *partition)
 {
-	return ioctl(fd, MTDPARTCTL_IOC_ADD_MTD_PARTITION, partition);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_ADD_MTD_PARTITION, partition);
 }
 
 int mtdpartctl_context_add_partition(
     int fd, struct ext_mtd_partition_info *partition)
 {
-	return ioctl(fd, MTDPARTCTL_IOC_ADD_CONTEXT_PART, partition);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_ADD_CONTEXT_PART, partition);
 }
 
 int mtdpartctl_context_create_partitions(int fd)
 {
-	return ioctl(fd, MTDPARTCTL_IOC_CREATE_CONTEXT_PARTITIONS, 0);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_CREATE_CONTEXT_PARTITIONS, 0);
 }
 
 int mtdpartctl_context_restart(int fd)
 {
-	return ioctl(fd, MTDPARTCTL_IOC_RESTART_CONTEXT, 0);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(fd, MTDPARTCTL_IOC_RESTART_CONTEXT, 0);
 }
 
 int mtdpartctl_delete_mtd_partitions(int fd)
 {
-	return ioctl(fd, MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS, 0);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS, 0);
 }
 
 int mtdpartctl_delete_partition(int fd, u32 idx)
 {
 	u32 tmp = idx;
-	return ioctl(fd, MTDPARTCTL_IOC_DEL_MTD_PARTITION, &tmp);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_DEL_MTD_PARTITION, &tmp);
 }
