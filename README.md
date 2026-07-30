@@ -1,11 +1,20 @@
 # mtdpartikr - MTD partitioning in kernel runtime
 
-`mtdpartikr` is a kernel module which registers new character devices for
-master MTD devices, to allow userspace to create MTD partitions in kernel
+`mtdpartikr` is a component in the nfiop project, which is intended for
+providing a capability of partitioning an MTD device in kernel runtime.
+
+`mtdpartikr` is also a kernel module which registers new character devices 
+for master MTD devices, to allow userspace to create MTD partitions in kernel
 runtime, without rebooting, after the boot process is completed.
 
-It is intended specifically for flash devices and can filter based on
-the MTD type - for now, either a NAND or NOR flash device.
+Together with `mtdpartd`, it serves as a vital component in the nfiop 
+ecosystem, where otherwise it would be much harder to handle different parts
+of a flash chip separately. 
+
+`mtdpartikr` is designed specifically for flash devices and can filter based 
+on the MTD type - for now, either a NAND or NOR flash device.
+
+### On the word "partikr"
 
 `mtdpartikr` is pronounced as "partiker" (`em-tee-dee-par-tee-ker`).
 
