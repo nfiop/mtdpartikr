@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "dev.h"
+#include "ioctl_utils.h"
 
 int open_mtdpartctl_device_by_argv_index(const char *index)
 {
@@ -54,16 +55,6 @@ int open_mtdpartctl_device_by_argv_index(const char *index)
 	fprintf(stderr, "Device opened successfully\n");
 	return fd;
 }
-
-#define INVOKE_IOCTL_WITH_RET_AS_ERRNO(fd, ioctl_name, param)                  \
-	do {                                                                   \
-		int ret;                                                       \
-		ret = ioctl(fd, ioctl_name, param);                            \
-		if (ret < 0) {                                                 \
-			ret = -errno;                                          \
-		}                                                              \
-		return ret;                                                    \
-	} while (0)
 
 int mtdpartctl_get_info(int fd, struct mtdpartctl_info *info)
 {
