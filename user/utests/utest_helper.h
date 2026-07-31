@@ -42,6 +42,13 @@
 		return 1;                                                      \
 	} while (0)
 
+#define TEST_PASS_IF_REACHED(test_name, sub_tests_count)                       \
+	do {                                                                   \
+		fprintf(stderr, "TEST PASS %s: sub-tests passed - %d\n",       \
+		    test_name, sub_tests_count);                               \
+		return 0;                                                      \
+	} while (0)
+
 #define TEST_PASS_IF_SUCCESS_EXPECTED(test_name, ret)                          \
 	do {                                                                   \
 		if (ret == 0) {                                                \

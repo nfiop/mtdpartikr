@@ -24,6 +24,5 @@ int main(int argc, char *argv[])
 
 	TEST_FAIL_CONDITIONAL_IF_ERRNO_ZERO(TEST_NAME, "test2", ret);
 
-	ret = 0;
-	TEST_PASS_IF_SUCCESS_EXPECTED(TEST_NAME, ret);
+	TEST_PASS_IF_REACHED(TEST_NAME, 2);
 }
