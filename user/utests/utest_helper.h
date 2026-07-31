@@ -30,7 +30,7 @@
 #include "dev.h"
 #include "ioctl_utils.h"
 
-static inline int test_pass_if_errno_occured(
+static inline int test_pass_if_errno_non_zero_and_expected(
     const char *test_name, int ret, int expected_errno)
 {
 	if (ret < 0 && ret == expected_errno) {
@@ -42,9 +42,10 @@ static inline int test_pass_if_errno_occured(
 	return 1;
 }
 
-#define TEST_PASS_IF_ERRNO_OCCURED(__test_name, __ret_var, __expected_errno)   \
+#define TEST_PASS_IF_ERRNO_NON_ZERO_AND_EXPECTED(                              \
+    __test_name, __ret_var, __expected_errno)                                  \
 	do {                                                                   \
-		return test_pass_if_errno_occured(                             \
+		return test_pass_if_errno_non_zero_and_expected(               \
 		    __test_name, __ret_var, __expected_errno);                 \
 	} while (0)
 
@@ -58,11 +59,11 @@ static inline int test_pass_if_reached(
 
 #define TEST_PASS_IF_REACHED(__test_name, __sub_tests_count)                   \
 	do {                                                                   \
-		return test_pass_if_success_expected(                          \
-		    __test_name, __sub_tests_count);                           \
+		return test_pass_if_reached(__test_name, __sub_tests_count);   \
 	} while (0)
 
-static inline int test_pass_if_success_expected(const char *test_name, int ret)
+static inline int test_pass_if_ret_variable_is_zero(
+    const char *test_name, int ret)
 {
 	if (ret == 0) {
 		fprintf(stderr, "TEST PASS %s: return value is 0\n", test_name);
@@ -73,9 +74,10 @@ static inline int test_pass_if_success_expected(const char *test_name, int ret)
 	return 1;
 }
 
-#define TEST_PASS_IF_SUCCESS_EXPECTED(__test_name, __ret_var)                  \
+#define TEST_PASS_IF_RET_VARIABLE_ZEROED(__test_name, __ret_var)               \
 	do {                                                                   \
-		return test_pass_if_success_expected(__test_name, __ret_var);  \
+		return test_pass_if_ret_variable_is_zero(                      \
+		    __test_name, __ret_var);                                   \
 	} while (0)
 
 static inline int subtest_fail_if_errno_set(

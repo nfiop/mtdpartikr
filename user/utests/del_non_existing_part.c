@@ -19,5 +19,5 @@ int main(int argc, char *argv[])
 	/* Index 256 is unlikely to exist... */
 	ret = mtdpartctl_delete_partition(fd, 256);
 
-	TEST_PASS_IF_ERRNO_OCCURED(TEST_NAME, ret, -EINVAL);
+	TEST_PASS_IF_ERRNO_NON_ZERO_AND_EXPECTED(TEST_NAME, ret, -EINVAL);
 }

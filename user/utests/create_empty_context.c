@@ -21,5 +21,5 @@ int main(int argc, char *argv[])
 	 */
 	ret = mtdpartctl_context_create_partitions(fd);
 
-	TEST_PASS_IF_ERRNO_OCCURED(TEST_NAME, ret, -EINVAL);
+	TEST_PASS_IF_ERRNO_NON_ZERO_AND_EXPECTED(TEST_NAME, ret, -EINVAL);
 }

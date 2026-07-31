@@ -19,5 +19,5 @@ int main(int argc, char *argv[])
 
 	ret = mtdpartctl_get_info(fd, &info);
 
-	TEST_PASS_IF_SUCCESS_EXPECTED(TEST_NAME, ret);
+	TEST_PASS_IF_RET_VARIABLE_ZEROED(TEST_NAME, ret);
 }
