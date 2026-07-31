@@ -7,6 +7,11 @@ providing a capability of partitioning an MTD device in kernel runtime.
 for master MTD devices, to allow userspace to create MTD partitions in kernel
 runtime, without rebooting, after the boot process is completed.
 
+It accomplishes re-partitioning of MTDs by spawning its own proxy MTDs which
+are backed by existing MTDs, and with tight control over the lifetime model
+of the proxy MTDs, the kernel module is able to respawn the proxy MTDs with
+new partition tables when such operation is needed.
+
 Together with `mtdpartd`, it serves as a vital component in the nfiop 
 ecosystem, where otherwise it would be much harder to handle different parts
 of a flash chip separately. 
