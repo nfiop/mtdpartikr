@@ -133,7 +133,7 @@ static int verify_partition_basic_conditions(
 
 	if ((offset + length) > master_mtd->size) {
 		pr_warn_ratelimited(
-		    "mtdpartikr: failed to add new partition, (off %llu + "
+		    "mtdpartikr: failed to add new partition, (offset %llu + "
 		    "len %llu) greater than MTD size %llu\n",
 		    offset, length, master_mtd->size);
 		return -EINVAL;
@@ -143,7 +143,7 @@ static int verify_partition_basic_conditions(
 	if (rem != 0) {
 		pr_warn_ratelimited("mtdpartikr: failed to add new partition, "
 				    "offset %llu unaligned to erase size %u\n",
-		    offset, master_mtd->erasesize);
+		    partition->offset, master_mtd->erasesize);
 		return -EINVAL;
 	}
 
@@ -151,7 +151,7 @@ static int verify_partition_basic_conditions(
 	if (rem != 0) {
 		pr_warn_ratelimited("mtdpartikr: failed to add new partition, "
 				    "length %llu unaligned to erase size %u\n",
-		    length, master_mtd->erasesize);
+		    partition->length, master_mtd->erasesize);
 		return -EINVAL;
 	}
 
