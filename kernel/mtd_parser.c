@@ -18,9 +18,10 @@ static int mtdpartctl_mock_parse_fn(struct mtd_info *master,
 {
 	/* We don't do anything deliberately - we want to invoke adding of
 	 * MTD partitions with our array when calling the
-	 * mtd_device_parse_register function.
+	 * mtd_device_parse_register function. `-ENOENT` is a signal for the
+	 * the kernel to skip using this parser altogether.
 	 */
-	return -EOPNOTSUPP;
+	return -ENOENT;
 }
 
 static struct mtd_part_parser mtdpartctl_mock_parser = {
