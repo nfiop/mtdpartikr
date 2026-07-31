@@ -30,65 +30,92 @@
 #include "dev.h"
 #include "ioctl_utils.h"
 
-#define TEST_PASS_IF_ERRNO_EXPECTED_OCCURED(test_name, ret, expected_errno)    \
+static inline int test_pass_if_errno_occured(
+    const char *test_name, int ret, int expected_errno)
+{
+	if (ret < 0 && ret == expected_errno) {
+		fprintf(stderr, "TEST PASS %s: errno %d (%s)\n", test_name, ret,
+		    strerror(-ret));
+		return 0;
+	}
+	fprintf(stderr, "TEST FAIL %s: unexpected success\n", test_name);
+	return 1;
+}
+
+#define TEST_PASS_IF_ERRNO_OCCURED(__test_name, __ret_var, __expected_errno)   \
 	do {                                                                   \
-		if (ret < 0 && ret == expected_errno) {                        \
-			fprintf(stderr, "TEST PASS %s: errno %d (%s)\n",       \
-			    test_name, ret, strerror(-ret));                   \
-			return 0;                                              \
-		}                                                              \
-		fprintf(                                                       \
-		    stderr, "TEST FAIL %s: unexpected success\n", test_name);  \
-		return 1;                                                      \
+		return test_pass_if_errno_occured(                             \
+		    __test_name, __ret_var, __expected_errno);                 \
 	} while (0)
 
-#define TEST_PASS_IF_REACHED(test_name, sub_tests_count)                       \
+static inline int test_pass_if_reached(
+    const char *test_name, size_t sub_tests_count)
+{
+	fprintf(stderr, "TEST PASS %s: sub-tests passed - %zu\n", test_name,
+	    sub_tests_count);
+	return 0;
+}
+
+#define TEST_PASS_IF_REACHED(__test_name, __sub_tests_count)                   \
 	do {                                                                   \
-		fprintf(stderr, "TEST PASS %s: sub-tests passed - %d\n",       \
-		    test_name, sub_tests_count);                               \
-		return 0;                                                      \
+		return test_pass_if_success_expected(                          \
+		    __test_name, __sub_tests_count);                           \
 	} while (0)
 
-#define TEST_PASS_IF_SUCCESS_EXPECTED(test_name, ret)                          \
+static inline int test_pass_if_success_expected(const char *test_name, int ret)
+{
+	if (ret == 0) {
+		fprintf(stderr, "TEST PASS %s: return value is 0\n", test_name);
+		return 0;
+	}
+	fprintf(stderr, "TEST FAIL %s: unexpected errno %d (%s)\n", test_name,
+	    ret, strerror(-ret));
+	return 1;
+}
+
+#define TEST_PASS_IF_SUCCESS_EXPECTED(__test_name, __ret_var)                  \
 	do {                                                                   \
-		if (ret == 0) {                                                \
-			fprintf(stderr, "TEST PASS %s: ret 0\n", test_name);   \
-			return 0;                                              \
-		}                                                              \
-		fprintf(stderr, "TEST FAIL %s: unexpected errno %d (%s)\n",    \
-		    test_name, ret, strerror(-ret));                           \
-		return 1;                                                      \
+		return test_pass_if_success_expected(__test_name, __ret_var);  \
 	} while (0)
 
-#define TEST_FAIL_CONDITIONAL_IF_ERRNO_SET(test_name, sub_reason, ret)         \
+static inline int subtest_fail_if_errno_set(
+    const char *test_name, const char *sub_reason, int ret)
+{
+	if (ret < 0) {
+		fprintf(stderr, "TEST FAIL %s (%s): errno %d (%s)\n", test_name,
+		    sub_reason ? sub_reason : "n/a", ret, strerror(-ret));
+		return 1;
+	}
+	return 0;
+}
+
+#define SUBTEST_FAIL_IF_ERRNO_SET(__test_name, __sub_reason, __ret_var)        \
 	do {                                                                   \
-		if (ret < 0) {                                                 \
-			fprintf(stderr, "TEST FAIL %s (%s): errno %d (%s)\n",  \
-			    test_name, sub_reason ? sub_reason : "n/a", ret,   \
-			    strerror(-ret));                                   \
+		int __ret;                                                     \
+		__ret = subtest_fail_if_errno_set(                             \
+		    __test_name, __sub_reason, __ret_var);                     \
+		if (__ret)                                                     \
 			return 1;                                              \
-		}                                                              \
 	} while (0)
 
-#define TEST_FAIL_CONDITIONAL_IF_ERRNO_ZERO(test_name, sub_reason, ret)        \
-	do {                                                                   \
-		if (ret == 0) {                                                \
-			fprintf(stderr,                                        \
-			    "TEST FAIL %s (%s): unexpected success\n",         \
-			    test_name, sub_reason ? sub_reason : "n/a");       \
-			return 1;                                              \
-		}                                                              \
-	} while (0)
+static inline int subtest_fail_if_errno_zero(
+    const char *test_name, const char *sub_reason, int ret)
+{
+	if (ret == 0) {
+		fprintf(stderr, "TEST FAIL %s (%s): unexpected success\n",
+		    test_name, sub_reason ? sub_reason : "n/a");
+		return 1;
+	}
+	return 0;
+}
 
-#define SET_FD_WITH_MTDPARTCTL_DEVICE_OR_FAIL(test_name, argc, argv)           \
+#define SUBTEST_FAIL_IF_ERRNO_ZERO(__test_name, __sub_reason, __ret_var)       \
 	do {                                                                   \
-		fd = get_mtdpartctl_device_fd(argc, argv);                     \
-		if (fd < 0) {                                                  \
-			fprintf(stderr,                                        \
-			    "TEST FAIL %s: failed to open device\n",           \
-			    test_name);                                        \
+		int __ret;                                                     \
+		__ret = subtest_fail_if_errno_zero(                            \
+		    __test_name, __sub_reason, __ret_var);                     \
+		if (__ret)                                                     \
 			return 1;                                              \
-		}                                                              \
 	} while (0)
 
 static inline int get_mtdpartctl_device_fd(int argc, char *argv[])
@@ -107,5 +134,25 @@ static inline int get_mtdpartctl_device_fd(int argc, char *argv[])
 
 	return fd;
 }
+
+static inline int open_mtdpartctl_device_or_exit(
+    const char *test_name, int argc, char **argv)
+{
+	int fd;
+	fd = get_mtdpartctl_device_fd(argc, argv);
+	if (fd < 0) {
+		fprintf(
+		    stderr, "TEST FAIL %s: failed to open device\n", test_name);
+		exit(1);
+	}
+	return fd;
+}
+
+#define SET_FD_WITH_MTDPARTCTL_DEVICE_OR_FAIL(                                 \
+    __test_name, __fd_ret, __argc, __argv)                                     \
+	do {                                                                   \
+		__fd_ret = open_mtdpartctl_device_or_exit(                     \
+		    __test_name, __argc, __argv);                              \
+	} while (0)
 
 #endif

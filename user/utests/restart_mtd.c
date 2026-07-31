@@ -14,7 +14,7 @@ int main(int argc, char *argv[])
 	int ret;
 	int fd;
 
-	SET_FD_WITH_MTDPARTCTL_DEVICE_OR_FAIL(TEST_NAME, argc, argv);
+	SET_FD_WITH_MTDPARTCTL_DEVICE_OR_FAIL(TEST_NAME, fd, argc, argv);
 
 	ret = mtdpartctl_delete_mtd_partitions(fd);
 

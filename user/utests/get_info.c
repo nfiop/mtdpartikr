@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
 	int fd;
 	struct mtdpartctl_info info;
 
-	SET_FD_WITH_MTDPARTCTL_DEVICE_OR_FAIL(TEST_NAME, argc, argv);
+	SET_FD_WITH_MTDPARTCTL_DEVICE_OR_FAIL(TEST_NAME, fd, argc, argv);
 
 	ret = mtdpartctl_get_info(fd, &info);
 
