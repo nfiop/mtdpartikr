@@ -161,6 +161,7 @@ static int add_context_partition(
     struct mtdpartctl_device *dev, struct ext_mtd_partition_info *partition)
 {
 	int ret;
+	int name_len;
 	struct mtd_partitions_context *context = &dev->context;
 	struct mtd_context_partition *new_part;
 
@@ -179,6 +180,16 @@ static int add_context_partition(
 		ret = -ENOMEM;
 		goto unlock_context;
 	}
+
+	/* Set the parameters of the new context partition now */
+	new_part->offset = partition->base.offset;
+	new_part->length = partition->base.length;
+	name_len = strnlen(partition->base.name,
+	    min(sizeof(new_part->name), sizeof(partition->base.name)));
+	memcpy(new_part->name, partition->base.name, name_len);
+	new_part->name[MTD_PARTITION_NAME_MAX_LENGTH - 1] = '\0';
+	new_part->writable = !partition->readonly;
+	new_part->powerup_lock_enabled = partition->powerup_lock_enabled;
 
 	list_add(&new_part->node, &context->partitions);
 	context->count++;
