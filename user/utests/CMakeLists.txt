@@ -60,6 +60,8 @@ set(MTDPARTCTL_UTESTS
     add_overlapping_context_parts
     add_part_no_context
     create_empty_context
+    create_nandsim_parts_while_holding_ref
+    create_nandsim_parts
     del_non_existing_part
     del_part
     get_info
