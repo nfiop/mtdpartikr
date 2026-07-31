@@ -337,6 +337,33 @@ static int adapt_possible_full_mtd_partition_length(
 	return 0;
 }
 
+static int mtd_relative_master_index_to_absolute_index(
+    struct mtd_info *mtd, u32 idx)
+{
+	u32 tmp_idx = 0;
+	int absolute_idx = -1;
+	struct mtd_info *child;
+
+	BUG_ON(mtd_get_master(mtd) != mtd);
+
+	/* NOTE: We probably don't need the locking here, because we know
+	 * _almost_ for sure that nothing can't remove our partitions, but
+	 * this is how the kernel does this in the `mtd_del_partition` function
+	 * so we probably need to do that too.
+	 */
+	mutex_lock(&mtd->master.partitions_lock);
+	list_for_each_entry(child, &mtd->partitions, part.node)
+	{
+		if (tmp_idx == idx) {
+			absolute_idx = child->index;
+			break;
+		}
+	}
+	mutex_unlock(&mtd->master.partitions_lock);
+
+	return absolute_idx;
+}
+
 static long mtdpartctl_chrdev_ioctl(
     struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -409,6 +436,7 @@ static long mtdpartctl_chrdev_ioctl(
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_DEL_MTD_PARTITION: {
+		int relative_idx;
 		u32 idx;
 		if (copy_from_user(&idx, (int __user *)arg, sizeof(u32)))
 			return -EFAULT;
@@ -416,8 +444,23 @@ static long mtdpartctl_chrdev_ioctl(
 		mutex_lock(&dev->proxy.lock);
 		if (dev->proxy.about_to_respawn || dev->proxy.use_refcnt != 0)
 			ret = -EBUSY;
-		else
-			ret = mtd_del_partition(mtd, idx);
+		else {
+			/* It should be noted that it is a technically racy
+			 * thing to do, because we lock the
+			 * `mtd->master.partitions_lock` mutex and release after
+			 * we find the absolute index until we call
+			 * `mtd_del_partition` which would lock it again.
+			 * The consequence is presumably not severe though -
+			 * just a fail to remove the partition.
+			 */
+			relative_idx =
+			    mtd_relative_master_index_to_absolute_index(
+				mtd, idx);
+			if (relative_idx < 0)
+				ret = -EINVAL;
+			else
+				ret = mtd_del_partition(mtd, relative_idx);
+		}
 		mutex_unlock(&dev->proxy.lock);
 		goto exit;
 	}

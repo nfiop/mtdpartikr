@@ -102,10 +102,11 @@ int mtdpartctl_delete_mtd_partitions(int fd);
  * @brief Remove a partition using an index
  *
  * This function will try to remove a MTD partition on a MTD master device
- * given an index.
+ * given an index, which is relative to the master MTD (i.e. 0 for first
+ * partition 1 for second partitions, etc).
  *
  * @param fd   file descriptor (associated with a master MTD device)
- * @param idx  index of the MTD partition to remove
+ * @param idx  relative index of the MTD partition to remove
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
 int mtdpartctl_delete_partition(int fd, u32 idx);
