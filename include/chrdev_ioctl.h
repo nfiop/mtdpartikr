@@ -22,6 +22,7 @@
 struct mtdpartctl_info {
 	__u32 backend_mtd_index;
 	__u32 erase_sector_size; /* Size of erase sector */
+	__u64 backend_mtd_size;  /* Size of backing MTD device */
 	__u32 reserved[6];	 /* reserved for future expansion */
 };
 

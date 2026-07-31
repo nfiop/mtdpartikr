@@ -377,6 +377,7 @@ static long mtdpartctl_chrdev_ioctl(
 		struct mtdpartctl_info tmp;
 		memset(&tmp, 0, sizeof(struct mtdpartctl_info));
 		tmp.backend_mtd_index = dev->mtd->index;
+		tmp.backend_mtd_size = dev->mtd->size;
 		tmp.erase_sector_size = dev->mtd->erasesize;
 
 		if (copy_to_user((void __user *)arg, &tmp,
