@@ -62,6 +62,18 @@ static inline int test_pass_if_reached(
 		return test_pass_if_reached(__test_name, __sub_tests_count);   \
 	} while (0)
 
+static inline int test_fail_if_reached(
+    const char *test_name, const char *reason)
+{
+	fprintf(stderr, "TEST FAIL %s: %s failed\n", test_name, reason);
+	return 1;
+}
+
+#define TEST_FAIL_IF_REACHED(__test_name, __reason)                            \
+	do {                                                                   \
+		return test_fail_if_reached(__test_name, __reason);            \
+	} while (0)
+
 static inline int test_pass_if_ret_variable_is_zero(
     const char *test_name, int ret)
 {

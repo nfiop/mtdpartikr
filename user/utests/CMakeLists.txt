@@ -63,6 +63,7 @@ set(MTDPARTCTL_UTESTS
     get_info
     invalid_ioctl
     restart_context
+    restart_mtd_while_holding_ref
     restart_mtd
 )
 
