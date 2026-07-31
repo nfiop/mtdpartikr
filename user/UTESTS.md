@@ -36,6 +36,8 @@ Intended result - all tests should fail with -EINVAL error code.
 This utest is testing adding a basic partition to an MTD master device
 from an `mtdpartctl` device.
 The request has invalid parameters such as:
+- An offset which is unaligned to erase block size
+- A length which is unaligned to erase block size
 - Offset + length which are greater than the MTD device length, in bytes
 - Offset + length which are overflowing a UINT64_MAX
 

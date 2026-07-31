@@ -55,6 +55,8 @@ add_dependencies(get_info_golang_test mtdpartctl)
 # C utests
 
 set(MTDPARTCTL_UTESTS
+    add_invalid_context_part
+    add_invalid_new_part
     add_overlapping_context_parts
     add_part_no_context
     create_empty_context

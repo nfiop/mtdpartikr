@@ -112,6 +112,29 @@ static inline int subtest_fail_if_errno_set(
 			return 1;                                              \
 	} while (0)
 
+static inline int subtest_fail_if_errno_set_unexpected(
+    const char *test_name, const char *sub_reason, int ret, int expected_errno)
+{
+	if (ret != expected_errno) {
+		fprintf(stderr,
+		    "TEST FAIL %s (%s): unexpected errno %d, expected %s\n",
+		    test_name, sub_reason ? sub_reason : "n/a", ret,
+		    strerror(-expected_errno));
+		return 1;
+	}
+	return 0;
+}
+
+#define SUBTEST_FAIL_IF_ERRNO_UNEXPECTED(                                      \
+    __test_name, __sub_reason, __ret_var, __expected_errno)                    \
+	do {                                                                   \
+		int __ret;                                                     \
+		__ret = subtest_fail_if_errno_set_unexpected(                  \
+		    __test_name, __sub_reason, __ret_var, __expected_errno);   \
+		if (__ret)                                                     \
+			return 1;                                              \
+	} while (0)
+
 static inline int subtest_fail_if_errno_zero(
     const char *test_name, const char *sub_reason, int ret)
 {
