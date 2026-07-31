@@ -59,6 +59,7 @@ set(MTDPARTCTL_UTESTS
     add_part_no_context
     create_empty_context
     del_non_existing_part
+    del_part
     get_info
     invalid_ioctl
     restart_context
