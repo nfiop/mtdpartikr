@@ -19,6 +19,7 @@
 
 #include "ctrl_dev.h"
 #include "ctrl_dev_class.h"
+#include "proxy_mtd_dev.h"
 
 #include "chrdev_ioctl.h"
 
@@ -114,7 +115,7 @@ static int verify_partition_params_locked(
 static int verify_partition_basic_conditions(
     struct mtdpartctl_device *dev, struct mtd_partition_info *partition)
 {
-	struct mtd_info *master_mtd = dev->mtd;
+	struct mtd_info *master_mtd = dev->backing_mtd;
 	u64 offset = partition->offset;
 	u64 length = partition->length;
 	u64 end;
@@ -138,7 +139,7 @@ static int verify_partition_basic_conditions(
 		return -EINVAL;
 	}
 
-	rem = do_div(offset, dev->mtd->erasesize);
+	rem = do_div(offset, master_mtd->erasesize);
 	if (rem != 0) {
 		pr_warn_ratelimited("mtdpartikr: failed to add new partition, "
 				    "offset %llu unaligned to erase size %u\n",
@@ -146,7 +147,7 @@ static int verify_partition_basic_conditions(
 		return -EINVAL;
 	}
 
-	rem = do_div(length, dev->mtd->erasesize);
+	rem = do_div(length, master_mtd->erasesize);
 	if (rem != 0) {
 		pr_warn_ratelimited("mtdpartikr: failed to add new partition, "
 				    "length %llu unaligned to erase size %u\n",
@@ -202,21 +203,6 @@ exit:
 	return ret;
 }
 
-static void get_mtd_device_after_put(struct mtd_info *mtd)
-{
-	int ret;
-	mutex_lock(&mtd_table_mutex);
-
-	ret = __get_mtd_device(mtd);
-
-	/* We should hold a refcount on the module so this should be not
-	 * possible to fail.
-	 */
-	BUG_ON(ret != 0);
-
-	mutex_unlock(&mtd_table_mutex);
-}
-
 static int convert_context_to_mtd_partitions_locked(
     struct mtd_partitions_context *context,
     struct mtd_partition **partitions_np)
@@ -257,6 +243,43 @@ static int convert_context_to_mtd_partitions_locked(
 	return 0;
 }
 
+static void set_proxy_mtd_about_to_respawn(
+    struct mtdpartctl_device *dev, bool respawn)
+{
+	mutex_lock(&dev->proxy.lock);
+	dev->proxy.about_to_respawn = respawn;
+	mutex_unlock(&dev->proxy.lock);
+}
+
+static int respawn_proxy_mtd_locked(struct mtdpartctl_device *dev,
+    struct mtd_partition *partitions, size_t partitions_count)
+{
+	int ret;
+
+	set_proxy_mtd_about_to_respawn(dev, true);
+
+	BUG_ON(dev->proxy.use_refcnt < 0);
+	if (dev->proxy.use_refcnt != 0) {
+		ret = -EBUSY;
+		goto cleanup;
+	}
+
+	/* We should be ready to unregister, given that nobody else uses this
+	 * MTD device.
+	 */
+	ret = mtd_device_unregister(dev->proxy.mtd);
+	if (ret < 0)
+		goto cleanup;
+
+	ret = mtd_device_parse_register(dev->proxy.mtd, mtdpartctl_probes, NULL,
+	    partitions, partitions_count);
+
+cleanup:
+	set_proxy_mtd_about_to_respawn(dev, false);
+
+	return ret;
+}
+
 static int create_context_partitions(struct mtdpartctl_device *dev)
 {
 	int ret;
@@ -269,29 +292,9 @@ static int create_context_partitions(struct mtdpartctl_device *dev)
 	if (ret < 0)
 		goto exit;
 
-	/* NOTE!: We hold a refcount on the MTD device as well as the module
-	 * that owns the MTD device. We will drop the refcount on the MTD
-	 * device, but keep the ref on the module to ensure the device doesn't
-	 * disappear.
-	 * This is quite tricky and playing with fire, but there's no way around
-	 * when we want to re-initialize the MTD device with new partitions.
-	 */
-
-	put_mtd_device(dev->mtd);
-
-	/* We should be ready to unregister, given that nobody else uses this
-	 * MTD device.
-	 */
-	ret = mtd_device_unregister(dev->mtd);
-	if (ret < 0)
-		goto cleanup;
-
 	BUG_ON(context->count == 0);
-	ret = mtd_device_parse_register(
-	    dev->mtd, mtdpartctl_probes, NULL, partitions, context->count);
+	ret = respawn_proxy_mtd_locked(dev, partitions, context->count);
 
-cleanup:
-	get_mtd_device_after_put(dev->mtd);
 	kvfree(partitions);
 
 exit:
@@ -304,34 +307,10 @@ static int delete_partitions(struct mtdpartctl_device *dev)
 	int ret;
 	struct mtd_partitions_context *context = &dev->context;
 
-	/* NOTE!: We hold a refcount on the MTD device as well as the module
-	 * that owns the MTD device. We will drop the refcount on the MTD
-	 * device, but keep the ref on the module to ensure the device doesn't
-	 * disappear.
-	 * This is quite tricky and playing with fire, but there's no way around
-	 * when we want to re-initialize the MTD device with no partitions.
-	 *
-	 * In contrast to the create_partitions function, we will lock the
-	 * context lock just so so we don't try to unreigster the device and
-	 * apply the context partitions while doing so.
-	 */
-
 	mutex_lock(&context->lock);
 
-	put_mtd_device(dev->mtd);
+	ret = respawn_proxy_mtd_locked(dev, NULL, 0);
 
-	/* We should be ready to unregister, given that nobody else uses this
-	 * MTD device.
-	 */
-	ret = mtd_device_unregister(dev->mtd);
-	if (ret < 0)
-		goto cleanup;
-
-	ret = mtd_device_parse_register(
-	    dev->mtd, mtdpartctl_probes, NULL, NULL, 0);
-
-cleanup:
-	get_mtd_device_after_put(dev->mtd);
 	mutex_unlock(&context->lock);
 	return ret;
 }
@@ -342,7 +321,7 @@ static int adapt_possible_full_mtd_partition_length(
     struct mtdpartctl_device *dev, struct mtd_partition_info *part_info)
 {
 	u64 part_length = part_info->length;
-	u64 mtd_dev_size = dev->mtd->size;
+	u64 mtd_dev_size = dev->backing_mtd->size;
 	u64 part_offset = part_info->offset;
 	/* MTDPART_SIZ_FULL should be defined as (0), but we don't like
 	 * that value, so let's change it to a real length.
@@ -363,22 +342,31 @@ static long mtdpartctl_chrdev_ioctl(
 {
 	int ret;
 	struct mtdpartctl_device *dev = filp->private_data;
-	struct mtd_info *backend;
+	struct mtd_info *mtd;
 
 	WARN_ON(dev == NULL);
 	if (dev == NULL)
 		return -EIO;
 
-	backend = dev->mtd;
-	BUG_ON(backend == NULL);
+	mtd = dev->proxy.mtd;
+	BUG_ON(mtd == NULL);
 
 	switch (cmd) {
 	case MTDPARTCTL_IOC_GET_INFO: {
 		struct mtdpartctl_info tmp;
 		memset(&tmp, 0, sizeof(struct mtdpartctl_info));
-		tmp.backend_mtd_index = dev->mtd->index;
-		tmp.backend_mtd_size = dev->mtd->size;
-		tmp.erase_sector_size = dev->mtd->erasesize;
+
+		/* We lock the proxy lock, so we have a coherent
+		 * `proxy.mtd->index` number. This number might get stale when
+		 * we finish this ioctl though, as someone might ask to respawn
+		 * the proxy MTD.
+		 */
+		mutex_lock(&dev->proxy.lock);
+		tmp.backend_mtd_index = dev->backing_mtd->index;
+		tmp.proxy_mtd_index = dev->proxy.mtd->index;
+		tmp.backend_mtd_size = dev->backing_mtd->size;
+		tmp.erase_sector_size = dev->backing_mtd->erasesize;
+		mutex_unlock(&dev->proxy.lock);
 
 		if (copy_to_user((void __user *)arg, &tmp,
 			sizeof(struct mtdpartctl_info))) {
@@ -399,19 +387,38 @@ static long mtdpartctl_chrdev_ioctl(
 		if (ret < 0)
 			goto exit;
 
+		/* FIXME: It seems like up until Linux 7.2-rc4, there's simply
+		 * almost no checks on the bounds of a partition. Drop this (or
+		 * make these checks less restrictive) when older kernels can be
+		 * ignored.
+		 */
 		ret = verify_partition_basic_conditions(dev, &part_info);
 		if (ret < 0)
 			goto exit;
 
-		ret = mtd_add_partition(backend, part_info.name,
-		    part_info.offset, part_info.length);
+		mutex_lock(&dev->proxy.lock);
+
+		if (dev->proxy.about_to_respawn || dev->proxy.use_refcnt != 0) {
+			ret = -EBUSY;
+		} else {
+			ret = mtd_add_partition(mtd, part_info.name,
+			    part_info.offset, part_info.length);
+		}
+
+		mutex_unlock(&dev->proxy.lock);
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_DEL_MTD_PARTITION: {
 		u32 idx;
 		if (copy_from_user(&idx, (int __user *)arg, sizeof(u32)))
 			return -EFAULT;
-		ret = mtd_del_partition(backend, idx);
+
+		mutex_lock(&dev->proxy.lock);
+		if (dev->proxy.about_to_respawn || dev->proxy.use_refcnt != 0)
+			ret = -EBUSY;
+		else
+			ret = mtd_del_partition(mtd, idx);
+		mutex_unlock(&dev->proxy.lock);
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_ADD_CONTEXT_PART: {
@@ -428,9 +435,6 @@ static long mtdpartctl_chrdev_ioctl(
 	}
 
 	case MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS: {
-		// NOTE/FIXME?: I am very unsure if it all works correctly.
-		// This should be tested thoroughly - it might have nasty bugs
-		// in the path.
 		ret = delete_partitions(dev);
 		goto exit;
 	}
@@ -489,7 +493,7 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 	 * when we unregister and register it when "parsing" the partition
 	 * table on that MTD device.
 	 */
-	if (!try_module_get(dev->mtd->owner)) {
+	if (!try_module_get(dev->backing_mtd->owner)) {
 		ret = -EIO;
 		goto exit;
 	}
@@ -497,9 +501,13 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 	INIT_LIST_HEAD(&dev->context.partitions);
 	mutex_init(&dev->context.lock);
 
-	ret = mtdpartctl_chrdev_create(dev);
+	ret = proxy_mtd_create_device(dev);
 	if (ret < 0)
 		goto drop_module;
+
+	ret = mtdpartctl_chrdev_create(dev);
+	if (ret < 0)
+		goto remove_proxy_mtd;
 
 	dev->device = device_create(dev->device_class, NULL, dev->devno, NULL,
 	    "mtdpartctl%d", MINOR(dev->devno));
@@ -512,12 +520,12 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 
 	return 0;
 
-drop_module:
-	module_put(dev->mtd->owner);
-
 delete_chrdev:
 	mtdpartctl_chrdev_destory(dev);
-
+remove_proxy_mtd:
+	proxy_mtd_device_destroy(dev);
+drop_module:
+	module_put(dev->backing_mtd->owner);
 exit:
 	return ret;
 }
@@ -526,5 +534,6 @@ void mtdpartctl_device_destroy(struct mtdpartctl_device *dev)
 {
 	device_destroy(dev->device_class, dev->devno);
 	mtdpartctl_chrdev_destory(dev);
-	module_put(dev->mtd->owner);
+	proxy_mtd_device_destroy(dev);
+	module_put(dev->backing_mtd->owner);
 }

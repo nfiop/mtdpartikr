@@ -37,10 +37,20 @@ struct mtd_partitions_context {
 	size_t count;
 };
 
+struct proxy_mtd {
+	struct mtd_info *mtd;
+
+	/* Lock to protect access to about_to_respawn and refcount */
+	struct mutex lock;
+
+	int use_refcnt;
+	bool about_to_respawn;
+};
+
 struct mtdpartctl_device {
 	/* Managed by the device class */
 	struct class *device_class;
-	struct mtd_info *mtd;
+	struct mtd_info *backing_mtd;
 	dev_t devno;
 
 	/* Managed by the character device */
@@ -48,6 +58,13 @@ struct mtdpartctl_device {
 	struct cdev ctrl_cdev;
 	atomic_t already_open;
 	struct mtd_partitions_context context;
+
+	/* A proxy MTD which is backed by backing_mtd, with a mutex and a
+	 * ref-count for ensuring that we don't try to "respawn" an MTD with
+	 * new partitions (or just respawn master MTD with no partitions)
+	 * when someone uses it somehow.
+	 */
+	struct proxy_mtd proxy;
 };
 
 int mtdpartctl_device_create(struct mtdpartctl_device *dev);

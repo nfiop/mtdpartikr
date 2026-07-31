@@ -78,12 +78,11 @@ static int add_devices(struct mtdpartctl_dev_class *dev_class, int *max_idx)
 		// Instead, we get a refcount when getting a struct mtd_info
 		// for the backing MTD device beforehand, and during removal
 		// of the module we put the refcount.
-		dev->mtd = dev_class->mtd_devs[*max_idx];
-		BUG_ON(dev->mtd == NULL);
+		dev->backing_mtd = dev_class->mtd_devs[*max_idx];
+		BUG_ON(dev->backing_mtd == NULL);
 
 		dev->devno = MKDEV(major, *max_idx);
 		dev->device_class = dev_class->device_class;
-
 		ret = mtdpartctl_device_create(dev);
 		if (ret != 0)
 			return ret;
@@ -296,7 +295,7 @@ static int device_class_create_devices(struct mtdpartctl_dev_class *dev_class)
 		goto error_create_devices;
 
 	for (device_idx = 0; device_idx < dev_class->count; device_idx++) {
-		mtd = dev_class->devs[device_idx]->mtd;
+		mtd = dev_class->devs[device_idx]->backing_mtd;
 		pr_info("mtdpartikr: mtdpartctl%d => mtd%d (%s)\n", device_idx,
 		    mtd->index, mtd->name);
 	}
@@ -317,6 +316,8 @@ int mtdpartctl_device_class_init(enum mtd_device_type_filter filter)
 	if (ret < 0) {
 		goto exit;
 	}
+
+	BUG_ON(s_all_devs.count == 0);
 
 	s_all_devs.devs = (struct mtdpartctl_device **)alloc_array_with_items(
 	    s_all_devs.count, sizeof(struct mtdpartctl_device));
