@@ -97,3 +97,9 @@ int mtdpartctl_delete_partition(int fd, u32 idx)
 	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
 	    fd, MTDPARTCTL_IOC_DEL_MTD_PARTITION, &tmp);
 }
+
+int mtdpartctl_list_partitions(int fd, struct mtd_partitions_list *list)
+{
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_GET_PARTITION_LIST, list);
+}

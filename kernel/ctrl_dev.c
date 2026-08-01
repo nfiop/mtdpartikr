@@ -13,6 +13,7 @@
 #include <linux/overflow.h>
 #include <linux/shmem_fs.h>
 #include <linux/slab.h>
+#include <linux/stddef.h>
 #include <linux/uaccess.h>
 #include <linux/version.h>
 #include <linux/vmalloc.h>
@@ -364,6 +365,54 @@ static int mtd_relative_master_index_to_absolute_index(
 	return absolute_idx;
 }
 
+static int copy_mtd_parts_list_to_user(struct mtd_info *mtd, size_t parts_count,
+    struct mtd_partitions_list __user *arg)
+{
+	int ret = 0;
+	u32 tmp_idx = 0;
+	struct mtd_indexed_partition_info __user *item =
+	    (struct mtd_indexed_partition_info __user
+		    *)((u8 *)arg + offsetof(struct mtd_partitions_list, parts));
+	struct mtd_info *child;
+	struct mtd_indexed_partition_info info;
+
+	BUG_ON(mtd_get_master(mtd) != mtd);
+
+	mutex_lock(&mtd->master.partitions_lock);
+	list_for_each_entry(child, &mtd->partitions, part.node)
+	{
+		if (tmp_idx >= parts_count)
+			break;
+		info.absolute_idx = child->index;
+		info.offset = child->part.offset;
+		info.length = child->part.size;
+
+		if (copy_to_user(item, &info,
+			sizeof(struct mtd_indexed_partition_info))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		item++;
+		tmp_idx++;
+	}
+	mutex_unlock(&mtd->master.partitions_lock);
+
+	if (ret < 0)
+		goto exit;
+
+	/* Copy the read count into the struct so userspace knows how many
+	 * partitions actually exist, if it passed a larger number than the
+	 * actual partitions' count.
+	 */
+	if (copy_to_user(arg, &tmp_idx, sizeof(u32))) {
+		ret = -EFAULT;
+	}
+
+exit:
+	return ret;
+}
+
 static long mtdpartctl_chrdev_ioctl(
     struct file *filp, unsigned int cmd, unsigned long arg)
 {
@@ -484,6 +533,22 @@ static long mtdpartctl_chrdev_ioctl(
 	case MTDPARTCTL_IOC_RESTART_CONTEXT: {
 		restart_context(&dev->context);
 		ret = 0;
+		goto exit;
+	}
+	case MTDPARTCTL_IOC_GET_PARTITION_LIST: {
+		struct mtd_partitions_list list;
+		if (copy_from_user(&list, (int __user *)arg,
+			sizeof(struct mtd_partitions_list)))
+			return -EFAULT;
+
+		mutex_lock(&dev->proxy.lock);
+		if (dev->proxy.about_to_respawn) {
+			ret = -EBUSY;
+		} else {
+			ret = copy_mtd_parts_list_to_user(mtd, list.read_count,
+			    (struct mtd_partitions_list __user *)arg);
+		}
+		mutex_unlock(&dev->proxy.lock);
 		goto exit;
 	}
 

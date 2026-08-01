@@ -33,6 +33,17 @@ struct mtd_partition_info {
 	char name[MTD_PARTITION_NAME_MAX_LENGTH];
 };
 
+struct mtd_indexed_partition_info {
+	__u32 absolute_idx;
+	__u64 offset;
+	__u64 length;
+};
+
+struct mtd_partitions_list {
+	__u32 read_count;
+	struct mtd_indexed_partition_info parts[];
+};
+
 struct ext_mtd_partition_info {
 	struct mtd_partition_info base;
 
@@ -56,5 +67,7 @@ struct ext_mtd_partition_info {
 #define MTDPARTCTL_IOC_CREATE_CONTEXT_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 4)
 #define MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 5)
 #define MTDPARTCTL_IOC_RESTART_CONTEXT _IO(MTDPARTCTL_IOC_MAGIC, 6)
+#define MTDPARTCTL_IOC_GET_PARTITION_LIST                                      \
+	_IOWR(MTDPARTCTL_IOC_MAGIC, 7, struct mtd_partitions_list)
 
 #endif

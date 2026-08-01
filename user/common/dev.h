@@ -111,4 +111,17 @@ int mtdpartctl_delete_mtd_partitions(int fd);
  */
 int mtdpartctl_delete_partition(int fd, u32 idx);
 
+/**
+ * @brief List MTD partitions
+ *
+ * This function will list a given set of partitions and their offsets and
+ * and lengths for an MTD, to the max count being specified in read_count field
+ * of a given `struct mtd_partitions_list`.
+ *
+ * @param fd   file descriptor (associated with a master MTD device)
+ * @param list a pointer to a list of partitions to be filled
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
+int mtdpartctl_list_partitions(int fd, struct mtd_partitions_list *list);
+
 #endif

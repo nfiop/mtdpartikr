@@ -59,6 +59,7 @@ set(MTDPARTCTL_UTESTS
     add_invalid_new_part
     add_overlapping_context_parts
     add_part_no_context
+    create_and_list_nandsim_parts
     create_empty_context
     create_nandsim_parts_while_holding_ref
     create_nandsim_parts
