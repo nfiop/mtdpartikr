@@ -8,10 +8,21 @@
 
 #include "proxy_mtd_dev.h"
 
+static struct mtdpartctl_device *proxy_get_mtdpartctl_dev(struct mtd_info *mtd)
+{
+	struct mtd_info *master_mtd = mtd_get_master(mtd);
+	struct mtdpartctl_device *dev;
+
+	BUG_ON(master_mtd == NULL);
+	dev = master_mtd->priv;
+	BUG_ON(dev == NULL);
+
+	return dev;
+}
+
 static void proxy_mtd_put_device(struct mtd_info *mtd)
 {
-	struct mtdpartctl_device *dev = mtd->priv;
-	BUG_ON(dev == NULL);
+	struct mtdpartctl_device *dev = proxy_get_mtdpartctl_dev(mtd);
 
 	mutex_lock(&dev->proxy.lock);
 	BUG_ON(dev->proxy.use_refcnt == 0);
@@ -23,8 +34,7 @@ static void proxy_mtd_put_device(struct mtd_info *mtd)
 static int proxy_mtd_get_device(struct mtd_info *mtd)
 {
 	int ret = 0;
-	struct mtdpartctl_device *dev = mtd->priv;
-	BUG_ON(dev == NULL);
+	struct mtdpartctl_device *dev = proxy_get_mtdpartctl_dev(mtd);
 
 	mutex_lock(&dev->proxy.lock);
 
