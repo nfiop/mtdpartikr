@@ -193,7 +193,7 @@ static int add_context_partition(
 	new_part->writable = !partition->readonly;
 	new_part->powerup_lock_enabled = partition->powerup_lock_enabled;
 
-	list_add(&new_part->node, &context->partitions);
+	list_add_tail(&new_part->node, &context->partitions);
 	context->count++;
 
 	ret = 0;
