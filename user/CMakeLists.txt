@@ -2,12 +2,16 @@ cmake_minimum_required(VERSION 3.20)
 
 find_program(GO_EXECUTABLE go REQUIRED)
 
-set(GO_UNIT_TEST_CFLAGS
+set(GO_GLOBAL_CFLAGS
 	"-I${CMAKE_SOURCE_DIR}/include -I${CMAKE_SOURCE_DIR}/user/common"
 )
 
-set(GO_UNIT_TEST_LDFLAGS
+set(GO_GLOBAL_LDFLAGS
 	"-L${CMAKE_BINARY_DIR}/user/common -lmtdpartctl_if -static"
+)
+
+set(GO_GLOBAL_EXTLDFLAGS
+    "-linkmode external -extldflags=-static"
 )
 
 message("Build for ${KERNEL_ARCH}, ${CMAKE_C_COMPILER}, ${SYSROOT_PATH}")

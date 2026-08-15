@@ -8,9 +8,9 @@ add_custom_target(get_info_golang_test ALL
 	GOARCH=${GO_ARCH}
 	GOARM=${GO_ARM_LVL}
 	GOROOT=${GO_SYMLINKED_DIR}
-	CGO_CFLAGS=${GO_UNIT_TEST_CFLAGS}
-	CGO_LDFLAGS=${GO_UNIT_TEST_LDFLAGS}
-	${GO_EXECUTABLE} build -o ${CMAKE_BINARY_DIR}/user/get_info_golang get_info.go
+	CGO_CFLAGS=${GO_GLOBAL_CFLAGS}
+	CGO_LDFLAGS=${GO_GLOBAL_LDFLAGS}
+	${GO_EXECUTABLE} build -ldflags ${GO_GLOBAL_EXTLDFLAGS} -o ${CMAKE_BINARY_DIR}/user/get_info_golang get_info.go
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     VERBATIM
 )

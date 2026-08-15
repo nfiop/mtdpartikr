@@ -1,0 +1,4 @@
+# offset length name flags
+0       10000 "first partition" ro
+10000   10000 "secondary partition" 0
+
