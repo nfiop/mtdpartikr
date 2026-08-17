@@ -3,8 +3,10 @@
  * Copyright (c) 2026 Liav A
  */
 
+#include <linux/mm.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mutex.h>
+#include <linux/slab.h>
 
 #include "proxy_mtd_dev.h"
 
