@@ -5,6 +5,7 @@
 
 #include <linux/mm.h>
 #include <linux/mtd/mtd.h>
+#include <linux/mtd/nand.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
 
@@ -94,6 +95,98 @@ static int proxy_mtd_read_oob(
 	return dev->backing_mtd->_read_oob(dev->backing_mtd, to, ops);
 }
 
+static void copy_nand_device_mem_organization(
+    const struct nand_device *src, struct nand_device *dest)
+{
+	struct nand_memory_organization *src_memorg =
+	    nanddev_get_memorg((struct nand_device *)src);
+	struct nand_memory_organization *dest_memorg = nanddev_get_memorg(dest);
+	memcpy(
+	    dest_memorg, src_memorg, sizeof(struct nand_memory_organization));
+}
+
+static int proxy_nand_erase(
+    struct nand_device *nand, const struct nand_pos *pos)
+{
+	struct mtd_info *mtd = nanddev_to_mtd(nand);
+	struct mtdpartctl_device *dev = mtd->priv;
+	struct nand_device *backend_nand = mtd_to_nanddev(dev->backing_mtd);
+	BUG_ON(backend_nand == NULL);
+
+	WARN_ON_ONCE(backend_nand->ops->erase == NULL);
+	if (!backend_nand->ops->erase)
+		return -EOPNOTSUPP;
+
+	return backend_nand->ops->erase(backend_nand, pos);
+}
+
+static int proxy_nand_markbad(
+    struct nand_device *nand, const struct nand_pos *pos)
+{
+	struct mtd_info *mtd = nanddev_to_mtd(nand);
+	struct mtdpartctl_device *dev = mtd->priv;
+	struct nand_device *backend_nand = mtd_to_nanddev(dev->backing_mtd);
+	BUG_ON(backend_nand == NULL);
+
+	WARN_ON_ONCE(backend_nand->ops->markbad == NULL);
+	if (!backend_nand->ops->markbad)
+		return -EOPNOTSUPP;
+
+	return backend_nand->ops->markbad(backend_nand, pos);
+}
+
+static bool proxy_nand_isbad(
+    struct nand_device *nand, const struct nand_pos *pos)
+{
+	struct mtd_info *mtd = nanddev_to_mtd(nand);
+	struct mtdpartctl_device *dev = mtd->priv;
+	struct nand_device *backend_nand = mtd_to_nanddev(dev->backing_mtd);
+	BUG_ON(backend_nand == NULL);
+
+	WARN_ON_ONCE(backend_nand->ops->isbad == NULL);
+	if (!backend_nand->ops->isbad)
+		return false;
+
+	return backend_nand->ops->isbad(backend_nand, pos);
+}
+
+static const struct nand_ops proxy_nand_ops = {
+    .erase = proxy_nand_erase,
+    .markbad = proxy_nand_markbad,
+    .isbad = proxy_nand_isbad,
+};
+
+static int initialize_proxy_nand_device(struct mtdpartctl_device *dev)
+{
+	int ret;
+	struct nand_device *nanddev;
+
+	dev->proxy.mtd = kvzalloc(sizeof(struct nand_device), GFP_KERNEL);
+	if (!dev->proxy.mtd) {
+		ret = -ENOMEM;
+		goto exit;
+	}
+
+	nanddev = mtd_to_nanddev(dev->proxy.mtd);
+
+	copy_nand_device_mem_organization(
+	    mtd_to_nanddev(dev->backing_mtd), nanddev);
+	ret = nanddev_init(nanddev, &proxy_nand_ops, THIS_MODULE);
+	if (ret != 0) {
+		pr_err("ufedm: failed to init nand_device for proxy MTD "
+		       "with error %d (%pe)\n",
+		    ret, ERR_PTR(-ret));
+		goto free_mem;
+	}
+
+	return 0;
+
+free_mem:
+	kvfree(dev->proxy.mtd);
+exit:
+	return ret;
+}
+
 int proxy_mtd_create_device(struct mtdpartctl_device *dev)
 {
 	int ret;
@@ -106,9 +199,16 @@ int proxy_mtd_create_device(struct mtdpartctl_device *dev)
 		return -EINVAL;
 	}
 
-	dev->proxy.mtd = kvzalloc(sizeof(struct mtd_info), GFP_KERNEL);
-	if (!dev->proxy.mtd) {
-		return -ENOMEM;
+	if (dev->backing_mtd->type == MTD_MLCNANDFLASH ||
+	    dev->backing_mtd->type == MTD_NANDFLASH) {
+		ret = initialize_proxy_nand_device(dev);
+		if (ret != 0)
+			return ret;
+	} else {
+		dev->proxy.mtd = kvzalloc(sizeof(struct mtd_info), GFP_KERNEL);
+		if (!dev->proxy.mtd) {
+			return -ENOMEM;
+		}
 	}
 
 	mtd = dev->proxy.mtd;
