@@ -220,6 +220,7 @@ static int del_recipe_part(struct mtdpartctl_device *dev, u32 index)
 			ret = 0;
 			goto unlock_recipe;
 		}
+		cur_idx++;
 	}
 
 	ret = -ENOENT;
@@ -616,7 +617,7 @@ static long mtdpartctl_chrdev_ioctl(
 		ret = 0;
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_LIST_RECIPE: {
+	case MTDPARTCTL_IOC_LIST_RECIPE_PARTS: {
 		struct recipe_partitions_list list;
 		if (copy_from_user(&list, (int __user *)arg,
 			sizeof(struct recipe_partitions_list)))

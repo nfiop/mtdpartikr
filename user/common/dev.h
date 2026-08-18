@@ -38,21 +38,7 @@ int open_mtdpartctl_device_by_argv_index(const char *index);
 int mtdpartctl_get_info(int fd, struct mtdpartctl_info *info);
 
 /**
- * @brief Add new partition using details in `struct mtd_partition_info`
- *
- * This function will try to create a new MTD partition on a MTD master device
- * using the given structure.
- * In contrast to partition added to a mtdpartctl recipe_context, this function
- * should be used for immediate action.
- *
- * @param fd        a file descriptor (associated with a master MTD device)
- * @param partition a pointer to `struct mtd_partition_info` to be used
- * @return negative (errno) if ioctl call failed, otherwise 0.
- */
-int mtdpartctl_add_new_partition(int fd, struct mtd_partition_info *partition);
-
-/**
- * @brief Add partition to a mtdpartctl recipe_context
+ * @brief Add partition to a mtdpartctl recipe context
  *
  * In contrast to mtdpartctl_add_new_partition function, this function add new
  * partition to a mtdpartctl recipe_context, which is not an "immediate" action.
@@ -64,10 +50,30 @@ int mtdpartctl_add_new_partition(int fd, struct mtd_partition_info *partition);
 int mtdpartctl_recipe_add_part(
     int fd, struct ext_mtd_partition_info *partition);
 
+/**
+ * @brief Delete partition to a mtdpartctl recipe context
+ *
+ * In contrast to mtdpartctl_add_new_partition function, this function add new
+ * partition to a mtdpartctl recipe_context, which is not an "immediate" action.
+ *
+ * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
+ * @param index     an index of the part to delete
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
 int mtdpartctl_recipe_del_part(int fd, size_t index);
 
-int mtdpartctl_recipe_list_partition(
-    int fd, struct ext_mtd_partition_info *partitions, size_t max_index);
+/**
+ * @brief List mtdpartctl recipe context parts
+ *
+ * This function will list a given set of partitions and their offsets and
+ * and lengths for an MTD recipe, to the max count being specified in read_count
+ * field of a given `struct recipe_partitions_list`.
+ *
+ * @param fd   file descriptor (associated with a master MTD device)
+ * @param list a pointer to a list of partitions to be filled
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
+int mtdpartctl_recipe_list_parts(int fd, struct recipe_partitions_list *list);
 
 /**
  * @brief Create MTD partitions using mtdpartctl recipe_context
@@ -102,6 +108,20 @@ int mtdpartctl_recipe_restart(int fd);
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
 int mtdpartctl_delete_mtd_partitions(int fd);
+
+/**
+ * @brief Add new partition using details in `struct mtd_partition_info`
+ *
+ * This function will try to create a new MTD partition on a MTD master device
+ * using the given structure.
+ * In contrast to partition added to a mtdpartctl recipe_context, this function
+ * should be used for immediate action.
+ *
+ * @param fd        a file descriptor (associated with a master MTD device)
+ * @param partition a pointer to `struct mtd_partition_info` to be used
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
+int mtdpartctl_add_new_partition(int fd, struct mtd_partition_info *partition);
 
 /**
  * @brief Remove a partition using an index

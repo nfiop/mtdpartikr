@@ -73,6 +73,13 @@ int mtdpartctl_recipe_add_part(int fd, struct ext_mtd_partition_info *partition)
 	    fd, MTDPARTCTL_IOC_RECIPE_ADD_PART, partition);
 }
 
+int mtdpartctl_recipe_del_part(int fd, size_t index)
+{
+	u32 tmp = index;
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_RECIPE_DEL_PART, &tmp);
+}
+
 int mtdpartctl_recipe_create_partitions(int fd)
 {
 	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
@@ -101,4 +108,10 @@ int mtdpartctl_list_partitions(int fd, struct mtd_partitions_list *list)
 {
 	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
 	    fd, MTDPARTCTL_IOC_GET_PARTITION_LIST, list);
+}
+
+int mtdpartctl_recipe_list_parts(int fd, struct recipe_partitions_list *list)
+{
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
+	    fd, MTDPARTCTL_IOC_LIST_RECIPE_PARTS, list);
 }

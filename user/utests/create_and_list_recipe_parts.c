@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <sys/sysinfo.h>
 
-#define TEST_NAME "create_and_list_nandsim_parts"
+#define TEST_NAME "create_and_list_recipe_parts"
 
 int main(int argc, char *argv[])
 {
@@ -22,7 +22,7 @@ int main(int argc, char *argv[])
 
 	struct {
 		__u32 read_count;
-		struct mtd_indexed_partition_info parts[50];
+		struct ext_mtd_partition_info parts[50];
 	} part_list;
 
 	ret = sysinfo(&info);
@@ -57,19 +57,15 @@ int main(int argc, char *argv[])
 		part_info.base.length = mtd_info.erase_sector_size;
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
 		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
-		SUBTEST_FAIL_IF_ERRNO_SET(
-		    TEST_NAME, "adding-partition-via-recipe_context", ret);
+		SUBTEST_FAIL_IF_ERRNO_SET(TEST_NAME, "adding-recipe-part", ret);
 	}
-
-	ret = mtdpartctl_recipe_create_partitions(fd);
-	SUBTEST_FAIL_IF_ERRNO_SET(TEST_NAME, "creating-partitions", ret);
 
 	/* Set to a higher number, we should get the correct number back
 	 * after ioctl is done.
 	 */
 	part_list.read_count = 50;
-	ret = mtdpartctl_list_partitions(
-	    fd, (struct mtd_partitions_list *)&part_list);
+	ret = mtdpartctl_recipe_list_parts(
+	    fd, (struct recipe_partitions_list *)&part_list);
 	SUBTEST_FAIL_IF_ERRNO_SET(TEST_NAME, "list-partitions", ret);
 
 	ret = (part_list.read_count == 20) ? 0 : -EIO;
@@ -77,8 +73,10 @@ int main(int argc, char *argv[])
 	    TEST_NAME, "list-partitions-returned-correct-num", ret);
 
 	for (i = 0; i < 20; i++) {
-		fprintf(stderr, "Partition %d, offset %llu, length %llu\n", i,
-		    part_list.parts[i].offset, part_list.parts[i].length);
+		fprintf(stderr, "Partition %d: %s, offset %llu, length %llu\n",
+		    i, part_list.parts[i].base.name,
+		    part_list.parts[i].base.offset,
+		    part_list.parts[i].base.length);
 	}
 
 	TEST_PASS_IF_REACHED(TEST_NAME, 2);

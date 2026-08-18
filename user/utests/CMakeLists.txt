@@ -24,11 +24,14 @@ set(MTDPARTCTL_UTESTS
     add_invalid_new_partition
     add_overlapping_recipe_parts
     add_partition
-    create_and_list_nandsim_parts
+    create_and_list_nandsim_partitions
+    create_and_list_recipe_parts
     create_empty_recipe
     create_nandsim_parts_while_holding_ref
     create_nandsim_parts
     del_non_existing_part
+    delete_from_empty_recipe
+    delete_recipe_part
     del_partition
     get_info
     invalid_ioctl

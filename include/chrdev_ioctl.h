@@ -70,12 +70,12 @@ struct recipe_partitions_list {
 #define MTDPARTCTL_IOC_RECIPE_ADD_PART                                         \
 	_IOW(MTDPARTCTL_IOC_MAGIC, 3, struct ext_mtd_partition_info)
 #define MTDPARTCTL_IOC_RECIPE_DEL_PART _IOW(MTDPARTCTL_IOC_MAGIC, 4, u32)
-#define MTDPARTCTL_IOC_LIST_RECIPE                                             \
-	_IOW(MTDPARTCTL_IOC_MAGIC, 5, struct ext_mtd_partition_info)
+#define MTDPARTCTL_IOC_LIST_RECIPE_PARTS                                       \
+	_IOW(MTDPARTCTL_IOC_MAGIC, 5, struct recipe_partitions_list)
 #define MTDPARTCTL_IOC_RECIPE_CREATE_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 6)
 #define MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 7)
 #define MTDPARTCTL_IOC_RESTART_RECIPE _IO(MTDPARTCTL_IOC_MAGIC, 8)
 #define MTDPARTCTL_IOC_GET_PARTITION_LIST                                      \
-	_IOWR(MTDPARTCTL_IOC_MAGIC, 9, struct recipe_partitions_list)
+	_IOWR(MTDPARTCTL_IOC_MAGIC, 9, struct mtd_partitions_list)
 
 #endif
