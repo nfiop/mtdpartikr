@@ -86,7 +86,7 @@ usage.
   If needed, delete them one after the other (with index of 0, repeated
   for N partitions) with the MTDPARTCTL_IOC_DEL_MTD_PARTITION ioctl.
 
-  Likewise, we don't support batch-insertion for partition for a backing MTD,
+  Likewise, we don't support batch-insertion of partitions for a backing MTD,
   for the same reason.
 
   The whole `mtdpartctl` recipe mechanism is intended for the proxy MTD,
