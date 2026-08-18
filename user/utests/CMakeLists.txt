@@ -20,19 +20,19 @@ add_dependencies(get_info_golang_test mtdpartctl_if generate_cgo_symlink)
 # C utests
 
 set(MTDPARTCTL_UTESTS
-    add_invalid_context_part
-    add_invalid_new_part
-    add_overlapping_context_parts
-    add_part_no_context
+    add_invalid_recipe_part
+    add_invalid_new_partition
+    add_overlapping_recipe_parts
+    add_partition
     create_and_list_nandsim_parts
-    create_empty_context
+    create_empty_recipe
     create_nandsim_parts_while_holding_ref
     create_nandsim_parts
     del_non_existing_part
-    del_part
+    del_partition
     get_info
     invalid_ioctl
-    restart_context
+    restart_recipe
     restart_mtd_while_holding_ref
     restart_mtd
 )

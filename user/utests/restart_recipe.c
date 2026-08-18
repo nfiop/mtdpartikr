@@ -7,7 +7,7 @@
 #include "utest_helper.h"
 #include <stdio.h>
 
-#define TEST_NAME "create_empty_context"
+#define TEST_NAME "restart_recipe_context"
 
 int main(int argc, char *argv[])
 {
@@ -16,10 +16,7 @@ int main(int argc, char *argv[])
 
 	SET_FD_WITH_MTDPARTCTL_DEVICE_OR_FAIL(TEST_NAME, fd, argc, argv);
 
-	/* After opening a file descriptor of `mtdpartctl` device
-	 * it should have empty context.
-	 */
-	ret = mtdpartctl_context_create_partitions(fd);
+	ret = mtdpartctl_recipe_restart(fd);
 
-	TEST_PASS_IF_ERRNO_NON_ZERO_AND_EXPECTED(TEST_NAME, ret, -EINVAL);
+	TEST_PASS_IF_RET_VARIABLE_ZEROED(TEST_NAME, ret);
 }

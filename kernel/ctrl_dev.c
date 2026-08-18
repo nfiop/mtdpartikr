@@ -30,17 +30,17 @@ extern struct mutex mtd_table_mutex;
 
 extern const char *const mtdpartctl_probes[];
 
-static void restart_context(struct mtd_partitions_context *context)
+static void restart_recipe(struct mtd_recipe *recipe)
 {
-	struct mtd_context_partition *list_node, *tmp;
-	mutex_lock(&context->lock);
-	list_for_each_entry_safe(list_node, tmp, &context->partitions, node)
+	struct mtd_recipe_part *list_node, *tmp;
+	mutex_lock(&recipe->lock);
+	list_for_each_entry_safe(list_node, tmp, &recipe->partitions, node)
 	{
 		list_del(&list_node->node);
 		kvfree(list_node);
 	}
-	context->count = 0;
-	mutex_unlock(&context->lock);
+	recipe->parts_count = 0;
+	mutex_unlock(&recipe->lock);
 }
 
 static int mtdpartctl_chrdev_open(struct inode *inode, struct file *filp)
@@ -59,8 +59,8 @@ static int mtdpartctl_chrdev_open(struct inode *inode, struct file *filp)
 		return -EBUSY;
 	}
 
-	/* Start with a clean context */
-	restart_context(&mtdpartctl_dev->context);
+	/* Start with a clean recipe */
+	restart_recipe(&mtdpartctl_dev->recipe);
 
 	filp->private_data = mtdpartctl_dev;
 	return 0;
@@ -74,7 +74,7 @@ static int mtdpartctl_chrdev_release(struct inode *inode, struct file *filp)
 }
 
 static int existing_partition_contains_range(
-    struct mtd_context_partition *partition, u64 new_offset, u64 new_length)
+    struct mtd_recipe_part *partition, u64 new_offset, u64 new_length)
 {
 	u64 existing_partition_end;
 	u64 new_partition_end;
@@ -94,15 +94,14 @@ static int existing_partition_contains_range(
 }
 
 static int verify_partition_params_locked(
-    struct mtd_partitions_context *context,
-    struct ext_mtd_partition_info *partition)
+    struct mtd_recipe *recipe, struct ext_mtd_partition_info *partition)
 {
 	int ret = 0;
-	struct mtd_context_partition *item;
+	struct mtd_recipe_part *item;
 	u64 offset = partition->base.offset;
 	u64 length = partition->base.length;
 
-	list_for_each_entry(item, &context->partitions, node)
+	list_for_each_entry(item, &recipe->partitions, node)
 	{
 		if (existing_partition_contains_range(item, offset, length)) {
 			ret = -EINVAL;
@@ -159,31 +158,31 @@ static int verify_partition_basic_conditions(
 	return 0;
 }
 
-static int add_context_partition(
+static int add_recipe_part(
     struct mtdpartctl_device *dev, struct ext_mtd_partition_info *partition)
 {
 	int ret;
 	int name_len;
-	struct mtd_partitions_context *context = &dev->context;
-	struct mtd_context_partition *new_part;
+	struct mtd_recipe *recipe = &dev->recipe;
+	struct mtd_recipe_part *new_part;
 
 	ret = verify_partition_basic_conditions(dev, &partition->base);
 	if (ret < 0)
 		goto exit;
 
-	mutex_lock(&context->lock);
+	mutex_lock(&recipe->lock);
 
-	ret = verify_partition_params_locked(context, partition);
+	ret = verify_partition_params_locked(recipe, partition);
 	if (ret < 0)
-		goto unlock_context;
+		goto unlock_recipe;
 
-	new_part = kvzalloc(sizeof(struct mtd_context_partition), GFP_KERNEL);
+	new_part = kvzalloc(sizeof(struct mtd_recipe_part), GFP_KERNEL);
 	if (!new_part) {
 		ret = -ENOMEM;
-		goto unlock_context;
+		goto unlock_recipe;
 	}
 
-	/* Set the parameters of the new context partition now */
+	/* Set the parameters of the new recipe partition now */
 	new_part->offset = partition->base.offset;
 	new_part->length = partition->base.length;
 	name_len = strnlen(partition->base.name,
@@ -193,41 +192,66 @@ static int add_context_partition(
 	new_part->writable = !partition->readonly;
 	new_part->powerup_lock_enabled = partition->powerup_lock_enabled;
 
-	list_add_tail(&new_part->node, &context->partitions);
-	context->count++;
+	list_add_tail(&new_part->node, &recipe->partitions);
+	recipe->parts_count++;
 
 	ret = 0;
 
-unlock_context:
-	mutex_unlock(&context->lock);
+unlock_recipe:
+	mutex_unlock(&recipe->lock);
 exit:
 	return ret;
 }
 
-static int convert_context_to_mtd_partitions_locked(
-    struct mtd_partitions_context *context,
-    struct mtd_partition **partitions_np)
+static int del_recipe_part(struct mtdpartctl_device *dev, u32 index)
+{
+	int ret;
+	size_t cur_idx = 0;
+	struct mtd_recipe_part *item, *tmp;
+	struct mtd_recipe *recipe = &dev->recipe;
+
+	mutex_lock(&recipe->lock);
+
+	list_for_each_entry_safe(item, tmp, &recipe->partitions, node)
+	{
+		if (cur_idx == index) {
+			list_del(&item->node);
+			kvfree(item);
+			ret = 0;
+			goto unlock_recipe;
+		}
+	}
+
+	ret = -ENOENT;
+
+unlock_recipe:
+	mutex_unlock(&recipe->lock);
+	return ret;
+}
+
+static int convert_recipe_to_mtd_partitions_locked(
+    struct mtd_recipe *recipe, struct mtd_partition **partitions_np)
 {
 	size_t idx;
-	struct mtd_context_partition *item;
+	struct mtd_recipe_part *item;
 	struct mtd_partition *partition;
 
 	/* Trying to apply an empty list is an invalid operation, don't allow it
 	 * because we can't do anything meaningful about this condition.
 	 */
-	if (context->count == 0) {
+	if (recipe->parts_count == 0) {
 		return -EINVAL;
 	}
 
-	BUG_ON(list_empty(&context->partitions));
+	BUG_ON(list_empty(&recipe->partitions));
 
-	*partitions_np =
-	    kvzalloc(sizeof(struct mtd_partition) * context->count, GFP_KERNEL);
+	*partitions_np = kvzalloc(
+	    sizeof(struct mtd_partition) * recipe->parts_count, GFP_KERNEL);
 	if (*partitions_np == NULL)
 		return -ENOMEM;
 
 	idx = 0;
-	list_for_each_entry(item, &context->partitions, node)
+	list_for_each_entry(item, &recipe->partitions, node)
 	{
 		partition = &(*partitions_np)[idx];
 		partition->name = item->name;
@@ -281,38 +305,38 @@ cleanup:
 	return ret;
 }
 
-static int create_context_partitions(struct mtdpartctl_device *dev)
+static int create_recipe_partitions(struct mtdpartctl_device *dev)
 {
 	int ret;
-	struct mtd_partitions_context *context = &dev->context;
+	struct mtd_recipe *recipe = &dev->recipe;
 	struct mtd_partition *partitions = NULL;
 
-	mutex_lock(&context->lock);
+	mutex_lock(&recipe->lock);
 
-	ret = convert_context_to_mtd_partitions_locked(context, &partitions);
+	ret = convert_recipe_to_mtd_partitions_locked(recipe, &partitions);
 	if (ret < 0)
 		goto exit;
 
-	BUG_ON(context->count == 0);
-	ret = respawn_proxy_mtd_locked(dev, partitions, context->count);
+	BUG_ON(recipe->parts_count == 0);
+	ret = respawn_proxy_mtd_locked(dev, partitions, recipe->parts_count);
 
 	kvfree(partitions);
 
 exit:
-	mutex_unlock(&context->lock);
+	mutex_unlock(&recipe->lock);
 	return ret;
 }
 
 static int delete_partitions(struct mtdpartctl_device *dev)
 {
 	int ret;
-	struct mtd_partitions_context *context = &dev->context;
+	struct mtd_recipe *recipe = &dev->recipe;
 
-	mutex_lock(&context->lock);
+	mutex_lock(&recipe->lock);
 
 	ret = respawn_proxy_mtd_locked(dev, NULL, 0);
 
-	mutex_unlock(&context->lock);
+	mutex_unlock(&recipe->lock);
 	return ret;
 }
 
@@ -363,6 +387,56 @@ static int mtd_relative_master_index_to_absolute_index(
 	mutex_unlock(&mtd->master.partitions_lock);
 
 	return absolute_idx;
+}
+
+static int copy_recipe_parts_list_to_user(struct mtd_recipe *recipe,
+    size_t parts_count, struct recipe_partitions_list __user *arg)
+{
+	int ret = 0;
+	u32 tmp_idx = 0;
+	struct ext_mtd_partition_info __user *item =
+	    (struct ext_mtd_partition_info __user
+		    *)((u8 *)arg +
+		       offsetof(struct recipe_partitions_list, parts));
+	struct mtd_recipe_part *part;
+	struct ext_mtd_partition_info info;
+
+	mutex_lock(&recipe->lock);
+	list_for_each_entry(part, &recipe->partitions, node)
+	{
+		if (tmp_idx >= parts_count)
+			break;
+		info.base.offset = part->offset;
+		info.base.length = part->length;
+		memcpy(
+		    info.base.name, part->name, MTD_PARTITION_NAME_MAX_LENGTH);
+		info.readonly = !part->writable;
+		info.powerup_lock_enabled = part->powerup_lock_enabled;
+
+		if (copy_to_user(
+			item, &info, sizeof(struct ext_mtd_partition_info))) {
+			ret = -EFAULT;
+			break;
+		}
+
+		item++;
+		tmp_idx++;
+	}
+	mutex_unlock(&recipe->lock);
+
+	if (ret < 0)
+		goto exit;
+
+	/* Copy the read count into the struct so userspace knows how many
+	 * partitions actually exist, if it passed a larger number than the
+	 * actual partitions' count.
+	 */
+	if (copy_to_user(arg, &tmp_idx, sizeof(u32))) {
+		ret = -EFAULT;
+	}
+
+exit:
+	return ret;
 }
 
 static int copy_mtd_parts_list_to_user(struct mtd_info *mtd, size_t parts_count,
@@ -513,16 +587,23 @@ static long mtdpartctl_chrdev_ioctl(
 		mutex_unlock(&dev->proxy.lock);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_ADD_CONTEXT_PART: {
+	case MTDPARTCTL_IOC_RECIPE_ADD_PART: {
 		struct ext_mtd_partition_info partition;
 		if (copy_from_user(&partition, (int __user *)arg,
 			sizeof(struct ext_mtd_partition_info)))
 			return -EFAULT;
-		ret = add_context_partition(dev, &partition);
+		ret = add_recipe_part(dev, &partition);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_CREATE_CONTEXT_PARTITIONS: {
-		ret = create_context_partitions(dev);
+	case MTDPARTCTL_IOC_RECIPE_DEL_PART: {
+		u32 idx;
+		if (copy_from_user(&idx, (int __user *)arg, sizeof(u32)))
+			return -EFAULT;
+		ret = del_recipe_part(dev, idx);
+		goto exit;
+	}
+	case MTDPARTCTL_IOC_RECIPE_CREATE_PARTITIONS: {
+		ret = create_recipe_partitions(dev);
 		goto exit;
 	}
 
@@ -530,9 +611,26 @@ static long mtdpartctl_chrdev_ioctl(
 		ret = delete_partitions(dev);
 		goto exit;
 	}
-	case MTDPARTCTL_IOC_RESTART_CONTEXT: {
-		restart_context(&dev->context);
+	case MTDPARTCTL_IOC_RESTART_RECIPE: {
+		restart_recipe(&dev->recipe);
 		ret = 0;
+		goto exit;
+	}
+	case MTDPARTCTL_IOC_LIST_RECIPE: {
+		struct recipe_partitions_list list;
+		if (copy_from_user(&list, (int __user *)arg,
+			sizeof(struct recipe_partitions_list)))
+			return -EFAULT;
+
+		mutex_lock(&dev->proxy.lock);
+		if (dev->proxy.about_to_respawn) {
+			ret = -EBUSY;
+		} else {
+			ret = copy_recipe_parts_list_to_user(&dev->recipe,
+			    list.read_count,
+			    (struct recipe_partitions_list __user *)arg);
+		}
+		mutex_unlock(&dev->proxy.lock);
 		goto exit;
 	}
 	case MTDPARTCTL_IOC_GET_PARTITION_LIST: {
@@ -606,8 +704,8 @@ int mtdpartctl_device_create(struct mtdpartctl_device *dev)
 		goto exit;
 	}
 
-	INIT_LIST_HEAD(&dev->context.partitions);
-	mutex_init(&dev->context.lock);
+	INIT_LIST_HEAD(&dev->recipe.partitions);
+	mutex_init(&dev->recipe.lock);
 
 	ret = proxy_mtd_create_device(dev);
 	if (ret < 0)

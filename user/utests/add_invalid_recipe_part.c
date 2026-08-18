@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <sys/sysinfo.h>
 
-#define TEST_NAME "add_invalid_context_part"
+#define TEST_NAME "add_invalid_recipe_context_part"
 
 int main(int argc, char *argv[])
 {

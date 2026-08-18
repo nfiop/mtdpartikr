@@ -10,14 +10,14 @@ for a controlled test environment.
 
 These are the tests:
 
-## `add_overlapping_context_parts`
+## `add_overlapping_recipe_parts`
 
 This utest is testing an attempt to add 2 partitions to an `mtdpartctl`
-device context, which are overlapping.
+device recipe context, which are overlapping.
 
 Intended result - fail to complete request.
 
-## `add_invalid_context_part`
+## `add_invalid_recipe_part`
 
 This utest is testing an attempt to add an invalid partition to an
 `mtdpartctl` device.
@@ -31,7 +31,7 @@ It tries to add such partition, each time on a different limitation:
 
 Intended result - all tests should fail with -EINVAL error code.
 
-## `add_invalid_new_part`
+## `add_invalid_new_partition`
 
 This utest is testing adding a basic partition to an MTD master device
 from an `mtdpartctl` device.
@@ -43,23 +43,23 @@ The request has invalid parameters such as:
 
 Intended result - fail to complete request.
 
-## `add_part_no_context`
+## `add_partition`
 
 This utest is testing adding a basic partition to an MTD master device
 from an `mtdpartctl` device.
 
 Intended result - partition added successfully.
 
-## `create_empty_context`
+## `create_empty_recipe`
 
 This utest is testing an attempt to create partitions on an MTD master
-device from an empty context of an `mtdpartctl` device.
+device from an empty recipe context of an `mtdpartctl` device.
 
 Intended result - fail to complete request.
 
 ## `create_nandsim_parts`
 
-This utest is testing adding a set of partitions from a context of an
+This utest is testing adding a set of partitions from a recipe context of an
 `mtdpartctl` device.
 
 Intended result - a set of MTD partitions is created.
@@ -67,7 +67,7 @@ Intended result - a set of MTD partitions is created.
 ## `create_nandsim_parts_while_holding_ref`
 
 This utest is testing an attempt to create a set of partitions from a
-context of an `mtdpartctl` device, while there's an MTD user on the
+recipe context of an `mtdpartctl` device, while there's an MTD user on the
 MTD master device.
 
 Intended result - fail to complete request.
@@ -98,11 +98,11 @@ This utest is testing invoking an invalid ioctl.
 
 Intended result - ioctl returns -EINVAL.
 
-## `restart_context`
+## `restart_recipe`
 
-This utest is testing the `MTDPARTCTL_IOC_RESTART_CONTEXT` ioctl.
+This utest is testing the `MTDPARTCTL_IOC_RESTART_RECIPE` ioctl.
 
-Intended result - `mtdpartctl` device with empty context.
+Intended result - `mtdpartctl` device with empty recipe context.
 
 ## `restart_mtd`
 

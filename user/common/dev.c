@@ -67,22 +67,21 @@ int mtdpartctl_add_new_partition(int fd, struct mtd_partition_info *partition)
 	    fd, MTDPARTCTL_IOC_ADD_MTD_PARTITION, partition);
 }
 
-int mtdpartctl_context_add_partition(
-    int fd, struct ext_mtd_partition_info *partition)
+int mtdpartctl_recipe_add_part(int fd, struct ext_mtd_partition_info *partition)
 {
 	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
-	    fd, MTDPARTCTL_IOC_ADD_CONTEXT_PART, partition);
+	    fd, MTDPARTCTL_IOC_RECIPE_ADD_PART, partition);
 }
 
-int mtdpartctl_context_create_partitions(int fd)
+int mtdpartctl_recipe_create_partitions(int fd)
 {
 	INVOKE_IOCTL_WITH_RET_AS_ERRNO(
-	    fd, MTDPARTCTL_IOC_CREATE_CONTEXT_PARTITIONS, 0);
+	    fd, MTDPARTCTL_IOC_RECIPE_CREATE_PARTITIONS, 0);
 }
 
-int mtdpartctl_context_restart(int fd)
+int mtdpartctl_recipe_restart(int fd)
 {
-	INVOKE_IOCTL_WITH_RET_AS_ERRNO(fd, MTDPARTCTL_IOC_RESTART_CONTEXT, 0);
+	INVOKE_IOCTL_WITH_RET_AS_ERRNO(fd, MTDPARTCTL_IOC_RESTART_RECIPE, 0);
 }
 
 int mtdpartctl_delete_mtd_partitions(int fd)

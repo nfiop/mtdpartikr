@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
 		part_info.base.offset = 1;
 		part_info.base.length = mtd_info.erase_sector_size;
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-		    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 		SUBTEST_FAIL_IF_ERRNO_UNEXPECTED(TEST_NAME,
 		    "adding-partition-with-unaligned-offset", ret, -EINVAL);
 	}
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 		part_info.base.offset = 0;
 		part_info.base.length = mtd_info.erase_sector_size + 1;
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-		    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 		SUBTEST_FAIL_IF_ERRNO_UNEXPECTED(TEST_NAME,
 		    "adding-partition-with-unaligned-length", ret, -EINVAL);
 	}
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 		part_info.base.length =
 		    0x000010000000 + mtd_info.erase_sector_size;
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-		    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 		SUBTEST_FAIL_IF_ERRNO_UNEXPECTED(TEST_NAME,
 		    "adding-partition-with-out-of-bound-size", ret, -EINVAL);
 	}
@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
 		part_info.base.offset = 1;
 		part_info.base.length = UINT64_MAX;
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-		    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 		SUBTEST_FAIL_IF_ERRNO_UNEXPECTED(TEST_NAME,
 		    "adding-partition-with-overflowing-range", ret, -EINVAL);
 	}
@@ -89,7 +89,7 @@ int main(int argc, char *argv[])
 		part_info.base.offset = 0;
 		part_info.base.length = 0;
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-		    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 		SUBTEST_FAIL_IF_ERRNO_UNEXPECTED(TEST_NAME,
 		    "adding-partition-with-zero-length", ret, -EINVAL);
 	}

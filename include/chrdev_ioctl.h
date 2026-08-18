@@ -57,17 +57,25 @@ struct ext_mtd_partition_info {
 	bool powerup_lock_enabled;
 };
 
+struct recipe_partitions_list {
+	__u32 read_count;
+	struct ext_mtd_partition_info parts[];
+};
+
 /* ioctl commands */
 #define MTDPARTCTL_IOC_GET_INFO _IOR(MTDPARTCTL_IOC_MAGIC, 0, struct mtdpartctl_info)
 #define MTDPARTCTL_IOC_ADD_MTD_PARTITION                                       \
 	_IOW(MTDPARTCTL_IOC_MAGIC, 1, struct mtd_partition_info)
 #define MTDPARTCTL_IOC_DEL_MTD_PARTITION _IOW(MTDPARTCTL_IOC_MAGIC, 2, u32)
-#define MTDPARTCTL_IOC_ADD_CONTEXT_PART                                        \
+#define MTDPARTCTL_IOC_RECIPE_ADD_PART                                         \
 	_IOW(MTDPARTCTL_IOC_MAGIC, 3, struct ext_mtd_partition_info)
-#define MTDPARTCTL_IOC_CREATE_CONTEXT_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 4)
-#define MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 5)
-#define MTDPARTCTL_IOC_RESTART_CONTEXT _IO(MTDPARTCTL_IOC_MAGIC, 6)
+#define MTDPARTCTL_IOC_RECIPE_DEL_PART _IOW(MTDPARTCTL_IOC_MAGIC, 4, u32)
+#define MTDPARTCTL_IOC_LIST_RECIPE                                             \
+	_IOW(MTDPARTCTL_IOC_MAGIC, 5, struct ext_mtd_partition_info)
+#define MTDPARTCTL_IOC_RECIPE_CREATE_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 6)
+#define MTDPARTCTL_IOC_DELETE_MTD_PARTITIONS _IO(MTDPARTCTL_IOC_MAGIC, 7)
+#define MTDPARTCTL_IOC_RESTART_RECIPE _IO(MTDPARTCTL_IOC_MAGIC, 8)
 #define MTDPARTCTL_IOC_GET_PARTITION_LIST                                      \
-	_IOWR(MTDPARTCTL_IOC_MAGIC, 7, struct mtd_partitions_list)
+	_IOWR(MTDPARTCTL_IOC_MAGIC, 9, struct recipe_partitions_list)
 
 #endif

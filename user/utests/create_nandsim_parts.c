@@ -50,11 +50,11 @@ int main(int argc, char *argv[])
 		part_info.base.offset = i * mtd_info.erase_sector_size;
 		part_info.base.length = mtd_info.erase_sector_size;
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-		    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 		SUBTEST_FAIL_IF_ERRNO_SET(
-		    TEST_NAME, "adding-partition-via-context", ret);
+		    TEST_NAME, "adding-partition-via-recipe_context", ret);
 	}
 
-	ret = mtdpartctl_context_create_partitions(fd);
+	ret = mtdpartctl_recipe_create_partitions(fd);
 	TEST_PASS_IF_RET_VARIABLE_ZEROED(TEST_NAME, ret);
 }

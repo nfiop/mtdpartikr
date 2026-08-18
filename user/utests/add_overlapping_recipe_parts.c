@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <sys/sysinfo.h>
 
-#define TEST_NAME "add_overlapping_context_parts"
+#define TEST_NAME "add_overlapping_recipe_context_parts"
 
 int create_partition_info_struct(struct ext_mtd_partition_info *part_info,
     u64 offset, u64 length, long special_idx)
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
 		    TEST_NAME, "create-part1-struct", ret);
 
 		INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-		    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+		    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 		/* First partition should be added without a problem */
 		SUBTEST_FAIL_IF_ERRNO_SET(TEST_NAME, "adding-part1", ret);
 	}
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	SUBTEST_FAIL_IF_ERRNO_SET(TEST_NAME, "create-part2-struct", ret);
 
 	INVOKE_IOCTL_WITH_VARIABLE_AS_ERRNO(
-	    fd, ret, MTDPARTCTL_IOC_ADD_CONTEXT_PART, &part_info);
+	    fd, ret, MTDPARTCTL_IOC_RECIPE_ADD_PART, &part_info);
 
 	TEST_PASS_IF_ERRNO_NON_ZERO_AND_EXPECTED(TEST_NAME, ret, -EINVAL);
 }

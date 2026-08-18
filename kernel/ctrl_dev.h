@@ -18,7 +18,7 @@
 
 #define MTDPARTCTL_DEVICE_NAME "mtdpartctl"
 
-struct mtd_context_partition {
+struct mtd_recipe_part {
 	u64 offset;
 	u64 length;
 	bool writable;
@@ -29,12 +29,12 @@ struct mtd_context_partition {
 	struct list_head node;
 };
 
-struct mtd_partitions_context {
+struct mtd_recipe {
 	struct mutex lock;
 
-	/* List of `struct mtd_context_partition`s */
+	/* List of `struct mtd_recipe_part`s */
 	struct list_head partitions;
-	size_t count;
+	size_t parts_count;
 };
 
 struct proxy_mtd {
@@ -57,7 +57,7 @@ struct mtdpartctl_device {
 	struct device *device;
 	struct cdev ctrl_cdev;
 	atomic_t already_open;
-	struct mtd_partitions_context context;
+	struct mtd_recipe recipe;
 
 	/* A proxy MTD which is backed by backing_mtd, with a mutex and a
 	 * ref-count for ensuring that we don't try to "respawn" an MTD with

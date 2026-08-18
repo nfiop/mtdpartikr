@@ -42,8 +42,8 @@ int mtdpartctl_get_info(int fd, struct mtdpartctl_info *info);
  *
  * This function will try to create a new MTD partition on a MTD master device
  * using the given structure.
- * In contrast to partition added to a mtdpartctl context, this function should
- * be used for immediate action.
+ * In contrast to partition added to a mtdpartctl recipe_context, this function
+ * should be used for immediate action.
  *
  * @param fd        a file descriptor (associated with a master MTD device)
  * @param partition a pointer to `struct mtd_partition_info` to be used
@@ -52,41 +52,46 @@ int mtdpartctl_get_info(int fd, struct mtdpartctl_info *info);
 int mtdpartctl_add_new_partition(int fd, struct mtd_partition_info *partition);
 
 /**
- * @brief Add partition to a mtdpartctl context
+ * @brief Add partition to a mtdpartctl recipe_context
  *
  * In contrast to mtdpartctl_add_new_partition function, this function add new
- * partition to a mtdpartctl context, which is not an "immediate" action.
+ * partition to a mtdpartctl recipe_context, which is not an "immediate" action.
  *
- * @param fd        a file descriptor (which has the mtdpartctl context)
+ * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
  * @param partition a pointer to `struct ext_mtd_partition_info` to be used
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
-int mtdpartctl_context_add_partition(
+int mtdpartctl_recipe_add_part(
     int fd, struct ext_mtd_partition_info *partition);
 
-/**
- * @brief Create MTD partitions using mtdpartctl context
- *
- * By using this function, we instruct the kernel to register actual partitions
- * on an MTD master device using a mtdpartctl context.
- *
- * @param fd        a file descriptor (which has the mtdpartctl context)
- * @param partition a pointer to `struct ext_mtd_partition_info` to be used
- * @return negative (errno) if ioctl call failed, otherwise 0.
- */
-int mtdpartctl_context_create_partitions(int fd);
+int mtdpartctl_recipe_del_part(int fd, size_t index);
+
+int mtdpartctl_recipe_list_partition(
+    int fd, struct ext_mtd_partition_info *partitions, size_t max_index);
 
 /**
- * @brief Create MTD partitions using mtdpartctl context
+ * @brief Create MTD partitions using mtdpartctl recipe_context
  *
  * By using this function, we instruct the kernel to register actual partitions
- * on an MTD master device using a mtdpartctl context.
+ * on an MTD master device using a mtdpartctl recipe_context.
  *
- * @param fd        a file descriptor (which has the mtdpartctl context)
+ * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
  * @param partition a pointer to `struct ext_mtd_partition_info` to be used
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
-int mtdpartctl_context_restart(int fd);
+int mtdpartctl_recipe_create_partitions(int fd);
+
+/**
+ * @brief Create MTD partitions using mtdpartctl recipe_context
+ *
+ * By using this function, we instruct the kernel to register actual partitions
+ * on an MTD master device using a mtdpartctl recipe_context.
+ *
+ * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
+ * @param partition a pointer to `struct ext_mtd_partition_info` to be used
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
+int mtdpartctl_recipe_restart(int fd);
 
 /**
  * @brief Delete all MTD partitions of a master MTD device
