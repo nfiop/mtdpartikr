@@ -82,10 +82,6 @@ usage.
   The reason for this is to ensure erase semantics are always valid on
   all platforms and drivers.
 
-- `mtdpartikr` doesn't provide a way to batch-remove multiple MTD partitions
-  nor "reset" an MTD device back to a state of no partitions.
-
-  The kernel doesn't support such mechanism easily, so I didn't bother
-  to build something complicated when the solution is to either reboot
-  or, (unsafely due a possible userspace race condition) delete each
-  partition on your risk.
+- `mtdpartikr` doesn't support batch-removal of a backing MTD. If needed,
+  delete them one after the other (with index of 0, repeated for N partitions)
+  with the MTDPARTCTL_IOC_DEL_MTD_PARTITION ioctl.
