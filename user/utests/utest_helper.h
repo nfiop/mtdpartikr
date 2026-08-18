@@ -33,10 +33,16 @@
 static inline int test_pass_if_errno_non_zero_and_expected(
     const char *test_name, int ret, int expected_errno)
 {
-	if (ret < 0 && ret == expected_errno) {
-		fprintf(stderr, "TEST PASS %s: errno %d (%s)\n", test_name, ret,
-		    strerror(-ret));
-		return 0;
+	if (ret < 0) {
+		if (ret == expected_errno) {
+			fprintf(stderr, "TEST PASS %s: errno %d (%s)\n",
+			    test_name, ret, strerror(-ret));
+			return 0;
+		}
+		fprintf(stderr,
+		    "TEST FAIL %s: unexpected errno %d (%s), expected %d\n",
+		    test_name, ret, strerror(-ret), expected_errno);
+		return 1;
 	}
 	fprintf(stderr, "TEST FAIL %s: unexpected success\n", test_name);
 	return 1;
