@@ -82,6 +82,13 @@ usage.
   The reason for this is to ensure erase semantics are always valid on
   all platforms and drivers.
 
-- `mtdpartikr` doesn't support batch-removal of a backing MTD. If needed,
-  delete them one after the other (with index of 0, repeated for N partitions)
-  with the MTDPARTCTL_IOC_DEL_MTD_PARTITION ioctl.
+- `mtdpartikr` doesn't support batch-removal for partition of a backing MTD.
+  If needed, delete them one after the other (with index of 0, repeated
+  for N partitions) with the MTDPARTCTL_IOC_DEL_MTD_PARTITION ioctl.
+
+  Likewise, we don't support batch-insertion for partition for a backing MTD,
+  for the same reason.
+
+  The whole `mtdpartctl` recipe mechanism is intended for the proxy MTD,
+  which we do have a control over its lifetime model, so these features are
+  supported.
