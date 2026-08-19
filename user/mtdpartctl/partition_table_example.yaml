@@ -1,0 +1,16 @@
+partition1:
+  name: "first partition"
+  offset: 0x0
+  length: 0x10000
+  flags: ro
+
+partition2:
+  name: "secondary partition"
+  offset: 0x10000
+  length: 0x10000
+
+partition2:
+  name: "third partition"
+  offset: 0x20000
+  length: 0x10000
+  flags: ro,powerup_lock

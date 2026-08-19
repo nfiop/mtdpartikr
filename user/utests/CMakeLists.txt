@@ -10,9 +10,11 @@ add_custom_target(get_info_golang_test ALL
 	GOROOT=${GO_SYMLINKED_DIR}
 	CGO_CFLAGS=${GO_GLOBAL_CFLAGS}
 	CGO_LDFLAGS=${GO_GLOBAL_LDFLAGS}
-	${GO_EXECUTABLE} build -ldflags ${GO_GLOBAL_EXTLDFLAGS} -o ${CMAKE_BINARY_DIR}/user/get_info_golang get_info.go
+	${GO_EXECUTABLE} build -a -ldflags ${GO_GLOBAL_EXTLDFLAGS} -o ${CMAKE_BINARY_DIR}/user/get_info_golang get_info.go
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     VERBATIM
+
+    DEPENDS mtdpartctl_if
 )
 
 add_dependencies(get_info_golang_test mtdpartctl_if generate_cgo_symlink)

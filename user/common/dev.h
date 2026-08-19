@@ -41,9 +41,9 @@ int mtdpartctl_get_info(int fd, struct mtdpartctl_info *info);
  * @brief Add partition to a mtdpartctl recipe context
  *
  * In contrast to mtdpartctl_add_new_partition function, this function add new
- * partition to a mtdpartctl recipe_context, which is not an "immediate" action.
+ * partition to a mtdpartctl recipe context, which is not an "immediate" action.
  *
- * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
+ * @param fd        a file descriptor (which has the mtdpartctl recipe context)
  * @param partition a pointer to `struct ext_mtd_partition_info` to be used
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
@@ -51,12 +51,27 @@ int mtdpartctl_recipe_add_part(
     int fd, struct ext_mtd_partition_info *partition);
 
 /**
+ * @brief Add partition to a mtdpartctl recipe context (from Golang)
+ *
+ * In contrast to mtdpartctl_add_new_partition function, this function add new
+ * partition to a mtdpartctl recipe context, which is not an "immediate" action.
+ *
+ * NOTE: This function is intended to be used in golang code, merely for it.
+ *
+ * @param fd        a file descriptor (which has the mtdpartctl recipe context)
+ * @param partition a pointer to `struct ext_mtd_partition_info` to be used
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
+int __go_mtdpartctl_recipe_add_part(int fd, u64 offset, u64 length, char *name,
+    bool writable, bool powerup_lock_enabled);
+
+/**
  * @brief Delete partition to a mtdpartctl recipe context
  *
  * In contrast to mtdpartctl_add_new_partition function, this function add new
- * partition to a mtdpartctl recipe_context, which is not an "immediate" action.
+ * partition to a mtdpartctl recipe context, which is not an "immediate" action.
  *
- * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
+ * @param fd        a file descriptor (which has the mtdpartctl recipe context)
  * @param index     an index of the part to delete
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
@@ -76,24 +91,24 @@ int mtdpartctl_recipe_del_part(int fd, size_t index);
 int mtdpartctl_recipe_list_parts(int fd, struct recipe_partitions_list *list);
 
 /**
- * @brief Create MTD partitions using mtdpartctl recipe_context
+ * @brief Create MTD partitions using mtdpartctl recipe context
  *
  * By using this function, we instruct the kernel to register actual partitions
- * on an MTD master device using a mtdpartctl recipe_context.
+ * on an MTD master device using a mtdpartctl recipe context.
  *
- * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
+ * @param fd        a file descriptor (which has the mtdpartctl recipe context)
  * @param partition a pointer to `struct ext_mtd_partition_info` to be used
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
 int mtdpartctl_recipe_create_partitions(int fd);
 
 /**
- * @brief Create MTD partitions using mtdpartctl recipe_context
+ * @brief Create MTD partitions using mtdpartctl recipe context
  *
  * By using this function, we instruct the kernel to register actual partitions
- * on an MTD master device using a mtdpartctl recipe_context.
+ * on an MTD master device using a mtdpartctl recipe context.
  *
- * @param fd        a file descriptor (which has the mtdpartctl recipe_context)
+ * @param fd        a file descriptor (which has the mtdpartctl recipe context)
  * @param partition a pointer to `struct ext_mtd_partition_info` to be used
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
@@ -114,7 +129,7 @@ int mtdpartctl_delete_mtd_partitions(int fd);
  *
  * This function will try to create a new MTD partition on a MTD master device
  * using the given structure.
- * In contrast to partition added to a mtdpartctl recipe_context, this function
+ * In contrast to partition added to a mtdpartctl recipe context, this function
  * should be used for immediate action.
  *
  * @param fd        a file descriptor (associated with a master MTD device)
@@ -122,6 +137,21 @@ int mtdpartctl_delete_mtd_partitions(int fd);
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
 int mtdpartctl_add_new_partition(int fd, struct mtd_partition_info *partition);
+
+/**
+ * @brief Add partition to a MTD device (from Golang)
+ *
+ * NOTE: This function is intended to be used in golang code, merely for it.
+ *
+ * @param fd        a file descriptor (for the mtdpartctl device which
+ * represents the MTD)
+ * @param offset    a partition offset
+ * @param length    a partition length
+ * @param name      a partition name
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
+int __go_mtdpartctl_add_new_partition(
+    int fd, u64 offset, u64 length, char *name);
 
 /**
  * @brief Remove a partition using an index
@@ -148,5 +178,18 @@ int mtdpartctl_delete_partition(int fd, u32 idx);
  * @return negative (errno) if ioctl call failed, otherwise 0.
  */
 int mtdpartctl_list_partitions(int fd, struct mtd_partitions_list *list);
+
+/**
+ * @brief Print mtdpartctl recipe parts
+ *
+ * This function will print a given set of partitions and their offsets and
+ * and lengths for an mtdpartctl recipe, to the max count being specified in
+ * max_index parameter.
+ *
+ * @param fd   file descriptor
+ * @param list a max index to enumerate
+ * @return negative (errno) if ioctl call failed, otherwise 0.
+ */
+int mtdpartctl_recipe_print_parts(int fd, size_t max_index);
 
 #endif
