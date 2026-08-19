@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <sys/sysinfo.h>
 
-#define TEST_NAME "add_overlapping_recipe_context_parts"
+#define TEST_NAME "add_overlapping_recipe_parts"
 
 int create_partition_info_struct(struct ext_mtd_partition_info *part_info,
     u64 offset, u64 length, long special_idx)

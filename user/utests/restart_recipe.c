@@ -7,7 +7,7 @@
 #include "utest_helper.h"
 #include <stdio.h>
 
-#define TEST_NAME "restart_recipe_context"
+#define TEST_NAME "restart_recipe"
 
 int main(int argc, char *argv[])
 {

@@ -7,7 +7,7 @@
 #include <stdio.h>
 #include <sys/sysinfo.h>
 
-#define TEST_NAME "add_part_no_recipe_context"
+#define TEST_NAME "add_partition"
 
 int main(int argc, char *argv[])
 {
