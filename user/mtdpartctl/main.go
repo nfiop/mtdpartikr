@@ -11,12 +11,13 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 	"unsafe"
-	"strconv"
 
 	"github.com/chzyer/readline"
 	"github.com/mattn/go-shellwords"
+	"gopkg.in/yaml.v3"
 )
 
 /*
@@ -29,8 +30,8 @@ var errQuit = errors.New("quit")
 
 type Partition struct {
 	Name   string `yaml:"name"`
-	Offset uint64 `yaml:"offset"`
-	Length uint64 `yaml:"length"`
+	Offset string `yaml:"offset"`
+	Length string `yaml:"length"`
 	Flags  string `yaml:"flags"`
 }
 
@@ -44,16 +45,16 @@ type Command struct {
 type CommandHandler func(file *os.File, args []string) error
 
 type CommandDef struct {
-	Name        string
-	Description string
-	Handler     CommandHandler
+	Name          string
+	Description   string
+	Handler       CommandHandler
 	ArgumentsHelp string
-	Examples []string
+	Examples      []string
 }
 
 type REPL struct {
-	commands []CommandDef
-	mtdpartctlFile *os.File
+	commands         []CommandDef
+	mtdpartctlFile   *os.File
 	recipePartsCount uint
 }
 
@@ -64,82 +65,82 @@ func NewREPL(mtdpartctlFile *os.File) *REPL {
 
 	r.commands = []CommandDef{
 		{
-			Name:        "help",
-			Description: "Show available commands and print arguments for a specific command",
-			Handler:     r.cmdHelp,
+			Name:          "help",
+			Description:   "Show available commands and print arguments for a specific command",
+			Handler:       r.cmdHelp,
 			ArgumentsHelp: "<command_name>",
-			Examples: []string{"help add_imm"},
+			Examples:      []string{"help add_imm"},
 		},
 		{
-			Name:        "add_imm",
-			Description: "Add a new partition for the MTD device",
-			Handler:     r.cmdAddImmediate,
+			Name:          "add_imm",
+			Description:   "Add a new partition for the MTD device",
+			Handler:       r.cmdAddImmediate,
 			ArgumentsHelp: "<offset> <length> <name string>",
-			Examples: []string{"add_imm 0 0x10000 \"test 0\""},
+			Examples:      []string{"add_imm 0 0x10000 \"test 0\""},
 		},
 		{
-			Name:        "dispatch_recipe",
-			Description: "Add a set of new partitions for the MTD device from a recipe table",
-			Handler:     r.cmdDispatchRecipe,
+			Name:          "dispatch_recipe",
+			Description:   "Add a set of new partitions for the MTD device from a recipe table",
+			Handler:       r.cmdDispatchRecipe,
 			ArgumentsHelp: "none",
-			Examples: []string{"dispatch_recipe"},
+			Examples:      []string{"dispatch_recipe"},
 		},
 		{
-			Name:        "add_recipe_part",
-			Description: "Add a recipe part for the MTD device",
-			Handler:     r.cmdAddRecipePart,
+			Name:          "add_recipe_part",
+			Description:   "Add a recipe part for the MTD device",
+			Handler:       r.cmdAddRecipePart,
 			ArgumentsHelp: "<offset> <length> <name string> <flags>",
-			Examples: []string{"add_recipe_part 0 0x10000 \"test 0\" rw,powerup_lock", 
-					"add_recipe_part 131072 131072 \"test 1\""},
+			Examples: []string{"add_recipe_part 0 0x10000 \"test 0\" rw,powerup_lock",
+				"add_recipe_part 131072 131072 \"test 1\""},
 		},
 		{
-			Name:        "del_recipe_part",
-			Description: "Delete a recipe part by its index (starting at 0) for the MTD device",
-			Handler:     r.cmdDeleteRecipePart,
+			Name:          "del_recipe_part",
+			Description:   "Delete a recipe part by its index (starting at 0) for the MTD device",
+			Handler:       r.cmdDeleteRecipePart,
 			ArgumentsHelp: "<index>",
-			Examples: []string{"del_recipe_part 0"},
+			Examples:      []string{"del_recipe_part 0"},
 		},
 		{
-			Name:        "delete_all",
-			Description: "Delete ALL (present) partitions of the MTD device",
-			Handler:     r.cmdDeleteAll,
+			Name:          "delete_all",
+			Description:   "Delete ALL (present) partitions of the MTD device",
+			Handler:       r.cmdDeleteAll,
 			ArgumentsHelp: "none",
-			Examples: []string{"delete_all"},
+			Examples:      []string{"delete_all"},
 		},
 		{
-			Name:        "delete",
-			Description: "Delete an active partition of the MTD device by its index (starting at 0)",
-			Handler:     r.cmdDeleteImmediate,
+			Name:          "delete",
+			Description:   "Delete an active partition of the MTD device by its index (starting at 0)",
+			Handler:       r.cmdDeleteImmediate,
 			ArgumentsHelp: "<index>",
-			Examples: []string{"delete 0"},
+			Examples:      []string{"delete 0"},
 		},
 		{
-			Name:        "status",
-			Description: "Show in-progress recipe table",
-			Handler:     r.cmdRecipeStatus,
+			Name:          "status",
+			Description:   "Show in-progress recipe table",
+			Handler:       r.cmdRecipeStatus,
 			ArgumentsHelp: "none",
-			Examples: []string{"status"},
+			Examples:      []string{"status"},
 		},
 		{
-			Name:        "reset",
-			Description: "Reset in-progress recipe",
-			Handler:     r.cmdRecipeReset,
+			Name:          "reset",
+			Description:   "Reset in-progress recipe",
+			Handler:       r.cmdRecipeReset,
 			ArgumentsHelp: "none",
-			Examples: []string{"reset"},
+			Examples:      []string{"reset"},
 		},
 		{
-			Name:        "exit",
-			Description: "Exit the REPL",
-			Handler:     r.cmdExit,
+			Name:          "exit",
+			Description:   "Exit the REPL",
+			Handler:       r.cmdExit,
 			ArgumentsHelp: "none",
-			Examples: []string{"exit"},
+			Examples:      []string{"exit"},
 		},
 		{
-			Name:        "quit",
-			Description: "Exit the REPL",
-			Handler:     r.cmdExit,
+			Name:          "quit",
+			Description:   "Exit the REPL",
+			Handler:       r.cmdExit,
 			ArgumentsHelp: "none",
-			Examples: []string{"quit"},
+			Examples:      []string{"quit"},
 		},
 	}
 
@@ -206,9 +207,9 @@ func (r *REPL) Run() error {
 
 func parseCommand(line string) (Command, error) {
 	fields, err := shellwords.Parse(line)
-    if err != nil {
-        return Command{}, fmt.Errorf("invalid command arguments")
-    }
+	if err != nil {
+		return Command{}, fmt.Errorf("invalid command arguments")
+	}
 
 	if len(fields) == 0 {
 		return Command{}, nil
@@ -253,7 +254,7 @@ func (r *REPL) cmdHelp(file *os.File, args []string) error {
 					fmt.Printf("    %s\n", example)
 				}
 				return nil
-			}	
+			}
 		}
 		return fmt.Errorf("invalid argument count\n")
 	}
@@ -261,7 +262,7 @@ func (r *REPL) cmdHelp(file *os.File, args []string) error {
 	if err := verifyCount(args, 0); err != nil {
 		return fmt.Errorf("invalid argument count\n")
 	}
-	
+
 	fmt.Println("Available commands:")
 
 	for _, cmd := range r.commands {
@@ -287,10 +288,10 @@ func (r *REPL) cmdAddImmediate(file *os.File, args []string) error {
 	}
 
 	cs := C.CString(args[2])
-    defer C.free(unsafe.Pointer(cs))
+	defer C.free(unsafe.Pointer(cs))
 
 	rc := C.__go_mtdpartctl_add_new_partition(C.int(r.mtdpartctlFile.Fd()),
-			C.uint64_t(offset), C.uint64_t(length), cs)
+		C.uint64_t(offset), C.uint64_t(length), cs)
 	if rc < 0 {
 		return fmt.Errorf("ioctl result: %d\n", rc)
 	}
@@ -303,16 +304,16 @@ func (r *REPL) cmdAddImmediate(file *os.File, args []string) error {
 // returns (rw, lockup_enabled, error)
 func parseRecipeFlags(input string) (bool, bool, error) {
 	flagTrimmed := strings.TrimSpace(input)
-	
+
 	flags := map[string]bool{
-		"ro":			   false,	
-		"powerup_lock":  false,
+		"ro":           false,
+		"powerup_lock": false,
 	}
-	
+
 	if flagTrimmed == "" {
-		return !flags["ro"], flags["lockup_enabled"], nil 	
+		return !flags["ro"], flags["lockup_enabled"], nil
 	}
-	
+
 	flagsSplitted := strings.Split(input, ",")
 
 	for _, flag := range flagsSplitted {
@@ -325,7 +326,35 @@ func parseRecipeFlags(input string) (bool, bool, error) {
 		flags[flag] = true
 	}
 
-	return !flags["ro"], flags["lockup_enabled"], nil 
+	return !flags["ro"], flags["lockup_enabled"], nil
+}
+
+func addRecipePart(fd int, offsetStr string, lengthStr string, name string, flags string) error {
+	writable, lockup_enabled, err := parseRecipeFlags(flags)
+	if err != nil {
+		return fmt.Errorf("%s\n", err)
+	}
+
+	offset, err := strconv.ParseUint(offsetStr, 0, 64)
+	if err != nil {
+		return fmt.Errorf("invalid argument: %s\n", err)
+	}
+
+	length, err := strconv.ParseUint(lengthStr, 0, 64)
+	if err != nil {
+		return fmt.Errorf("invalid argument: %s\n", err)
+	}
+
+	cs := C.CString(name)
+	defer C.free(unsafe.Pointer(cs))
+
+	rc := C.__go_mtdpartctl_recipe_add_part(C.int(fd),
+		C.uint64_t(offset), C.uint64_t(length), cs, C.bool(writable), C.bool(lockup_enabled))
+	if rc < 0 {
+		return fmt.Errorf("ioctl result: %d\n", rc)
+	}
+
+	return nil
 }
 
 func (r *REPL) cmdAddRecipePart(file *os.File, args []string) error {
@@ -339,28 +368,8 @@ func (r *REPL) cmdAddRecipePart(file *os.File, args []string) error {
 		}
 	}
 
-	writable, lockup_enabled, err := parseRecipeFlags(flags)
-	if err != nil {
-		return fmt.Errorf("%s\n", err)
-	}
-
-	offset, err := strconv.ParseUint(args[0], 0, 64)
-	if err != nil {
-		return fmt.Errorf("invalid argument: %s\n", err)
-	}
-
-	length, err := strconv.ParseUint(args[1], 0, 64)
-	if err != nil {
-		return fmt.Errorf("invalid argument: %s\n", err)
-	}
-
-	cs := C.CString(args[2])
-    defer C.free(unsafe.Pointer(cs))
-
-	rc := C.__go_mtdpartctl_recipe_add_part(C.int(r.mtdpartctlFile.Fd()),
-			C.uint64_t(offset), C.uint64_t(length), cs, C.bool(writable), C.bool(lockup_enabled))
-	if rc < 0 {
-		return fmt.Errorf("ioctl result: %d\n", rc)
+	if err := addRecipePart(int(r.mtdpartctlFile.Fd()), args[0], args[1], args[2], flags); err != nil {
+		return err
 	}
 
 	r.recipePartsCount++
@@ -409,7 +418,7 @@ func (r *REPL) cmdDeleteAll(file *os.File, args []string) error {
 	if err := verifyCount(args, 0); err != nil {
 		return err
 	}
-	
+
 	rc := C.mtdpartctl_delete_mtd_partitions(C.int(r.mtdpartctlFile.Fd()))
 	if rc < 0 {
 		return fmt.Errorf("ioctl result: %d\n", rc)
@@ -435,7 +444,7 @@ func (r *REPL) cmdRecipeStatus(file *os.File, args []string) error {
 		return err
 	}
 
-	if (r.recipePartsCount == 0) {
+	if r.recipePartsCount == 0 {
 		fmt.Println("Empty table")
 		return nil
 	}
@@ -500,9 +509,37 @@ func humanBytes(n uint64) string {
 	return fmt.Sprintf("%.1f %ciB", float64(n)/float64(div), "KMGT"[exp])
 }
 
+func useConfigFile(mtdpartctlFile *os.File, configPath string) error {
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("read error: %v\n", err)
+	}
+
+	var partitions []Partition
+	if err := yaml.Unmarshal(data, &partitions); err != nil {
+		return fmt.Errorf("unmarshal error: %v\n", err)
+	}
+
+	for _, partition := range partitions {
+		if err := addRecipePart(int(mtdpartctlFile.Fd()), partition.Offset,
+			partition.Length, partition.Name, partition.Flags); err != nil {
+			return err
+		}
+	}
+
+	rc := C.mtdpartctl_recipe_create_partitions(C.int(mtdpartctlFile.Fd()))
+	if rc < 0 {
+		return fmt.Errorf("ioctl result: %d\n", rc)
+	}
+
+	return nil
+}
+
 func main() {
 	printInfoOnly := flag.Bool("info-only", false, "print device information and exit")
 	printVerbose := flag.Bool("verbose", false, "enable verbose mode")
+	resetProxy := flag.Bool("reset-proxy", false, "reset the proxy MTD")
+	configFile := flag.String("config", "", "YAML configuration file")
 
 	flag.Parse()
 
@@ -519,7 +556,9 @@ func main() {
 	}
 	defer f.Close()
 
-	fmt.Fprintf(os.Stderr, "Succesfully opened %s\n", devicePath)
+	if *printVerbose {
+		fmt.Fprintf(os.Stderr, "Succesfully opened %s\n", devicePath)
+	}
 
 	if *printInfoOnly || *printVerbose {
 		fmt.Printf("MTD backing index: %d\n", info_struct.backend_mtd_index)
@@ -531,6 +570,22 @@ func main() {
 		}
 	}
 
+	if *resetProxy {
+		rc := C.mtdpartctl_delete_mtd_partitions(C.int(f.Fd()))
+		if rc < 0 {
+			fmt.Fprintf(os.Stderr, "ioctl result: %d\n", rc)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
+
+	if *configFile != "" {
+		if err := useConfigFile(f, *configFile); err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v", err)
+			os.Exit(1)
+		}
+		os.Exit(0)
+	}
 	repl := NewREPL(f)
 
 	if err := repl.Run(); err != nil {
