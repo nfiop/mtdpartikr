@@ -109,3 +109,16 @@ kernel versions).
   The whole `mtdpartctl` recipe mechanism is intended for the proxy MTD,
   which we do have a control over its lifetime model, so these features are
   supported.
+
+
+## License
+
+This project is licenses under the GPLv2 license.
+
+`mtdpartctl` depends on `gopkg.in/yaml.v3`, which is separately licensed
+under the Apache License 2.0/MIT.
+The dependency is obtained separately during the build and **is not** included
+in this repository for obvious reasons.
+
+For the same reasons, there will be no distributed binaries or builds -
+clone the repository and build it locally if needed.
