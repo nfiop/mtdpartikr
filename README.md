@@ -113,7 +113,14 @@ kernel versions).
 
 ## License
 
-This project is licenses under the GPLv2 license.
+This project is licensed under the 3 licenses for each component, roughly
+like this:
+- `GPLv2` license for kernel module code.
+- `GPL-2.0-only OR MIT` for include headers, utests and common user code.
+- `MIT` for mtdpartctl `main.go` file.
+
+For more details, see the [license](LICENSE) to understand how each component is
+licensed.
 
 `mtdpartctl` depends on `gopkg.in/yaml.v3`, which is separately licensed
 under the Apache License 2.0/MIT.
