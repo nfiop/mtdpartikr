@@ -73,6 +73,23 @@ logical chunks for differential processing.
 See instructions about [testing](TESTING.md) to learn more about actual
 usage.
 
+## Supported Linux versions
+
+This component is currently supported on kernel versions 7.x - for now -
+7.0, 7.1 and 7.2.
+
+Future kernel versions might be supported, if necessary.
+
+It is also supported on version 6.18.8 of the Linux kernel, so presumably
+it could be compiled on the 6.18.x series, and possibly even on the entire
+6.x series - although I didn't verify this.
+
+While it might be possible to add support for earlier kernel versions like
+the 5.x and even the 4.x series, I'm not very interested in supporting such
+setups, so unless there's an obvious reason to add support, I rather keep
+the code simpler (less `#ifdef`s for selecting code paths for specific
+kernel versions).
+
 ## Limitations
 
 - `mtdpartikr` doesn't intend to support unaligned offsets. You must
